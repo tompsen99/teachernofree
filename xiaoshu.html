@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌟 小数魔法屋</title>
+<style>
+  :root {
+    --primary: #667eea;
+    --success: #48bb78;
+    --danger: #f56565;
+    --warning: #ed8936;
+    --purple: #9f7aea;
+    --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card: #ffffff;
+    --radius: 20px;
+    --shadow: 0 10px 40px rgba(0,0,0,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: #333;
+    min-height: 100vh;
+    padding: 15px;
+  }
+  
+  #scaleWrapper {
+    transform-origin: top center;
+    transition: transform 0.3s ease;
+    max-width: 650px;
+    margin: 0 auto;
+  }
+  
+  .zoom-controls {
+    position: fixed;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
+    padding: 15px 10px;
+    border-radius: 25px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .zoom-btn {
+    width: 45px; height: 45px; border: none; border-radius: 12px;
+    font-size: 1.4rem; cursor: pointer;
+    transition: all 0.3s; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+  }
+  .zoom-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(102,126,234,0.5); }
+  .zoom-btn:active { transform: translateY(0); }
+  .zoom-btn.zoom-reset { 
+    background: linear-gradient(135deg, #48bb78, #38a169); 
+    font-size: 0.9rem; height: 40px;
+    box-shadow: 0 4px 12px rgba(72,187,120,0.4);
+  }
+  .zoom-label {
+    text-align: center;
+    font-size: 0.85rem; font-weight: bold; color: #4a5568;
+    padding: 6px 0; background: rgba(102,126,234,0.1);
+    border-radius: 8px;
+  }
+  
+  header { text-align: center; margin-bottom: 20px; color: #fff; }
+  h1 { font-size: 2.2rem; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+  
+  .nav {
+    display: flex; justify-content: center; gap: 10px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .nav-btn {
+    padding: 12px 24px; border: none; border-radius: 25px;
+    background: rgba(255,255,255,0.9); font-size: 1rem; cursor: pointer;
+    transition: all 0.3s; font-weight: bold; color: #4a5568;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .nav-btn.active { 
+    background: #fff; color: var(--primary); 
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+  }
+  .nav-btn:hover:not(.active) { background: #fff; transform: translateY(-2px); }
+  
+  main { padding-left: 75px; }
+  section {
+    background: var(--card); padding: 30px; border-radius: var(--radius);
+    box-shadow: var(--shadow); display: none; animation: fadeIn 0.4s ease;
+  }
+  section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+  .big-decimal {
+    font-size: 6rem; font-weight: bold;
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center; margin: 25px 0 15px; letter-spacing: 3px;
+  }
+  
+  .btn-row { display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap; }
+  .btn {
+    padding: 14px 32px; font-size: 1.1rem; border: none; border-radius: 14px;
+    cursor: pointer; transition: all 0.3s; font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+  .btn-correct { background: linear-gradient(135deg, var(--success), #38a169); color: #fff; }
+  .btn-next { background: linear-gradient(135deg, var(--primary), #5a67d8); color: #fff; }
+  
+  .answer-box {
+    margin-top: 20px; padding: 18px; border-radius: 14px;
+    background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+    color: #22543d; font-size: 1.5rem; text-align: center;
+    display: none; font-weight: bold;
+  }
+
+  .rule-tip {
+    background: linear-gradient(135deg, #faf5ff, #e9d8fd);
+    padding: 14px; border-radius: 12px; text-align: center;
+    color: #6b46c1; font-weight: bold; margin-bottom: 20px;
+    border: 2px solid #d6bcfa;
+  }
+  .property-base {
+    font-size: 3.5rem; font-weight: bold;
+    background: linear-gradient(135deg, var(--purple), #805ad5);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center; margin: 20px 0;
+  }
+  .cards-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0;
+  }
+  .p-card {
+    aspect-ratio: 1; border: 3px solid #e2e8f0; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: bold; cursor: pointer;
+    transition: all 0.3s; background: #f7fafc;
+  }
+  .p-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+  .p-card.selected { 
+    border-color: var(--success); background: #f0fff4; 
+    transform: scale(0.95); box-shadow: 0 0 0 3px rgba(72,187,120,0.3);
+  }
+  .p-card.correct-mark { border-color: var(--success); background: #c6f6d5; }
+  .p-card.wrong-mark { border-color: var(--danger); background: #fed7d7; }
+
+  /* 第三课：求近似数新布局 */
+  .level-bar {
+    display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .level-btn {
+    padding: 6px 12px; border: 2px solid #e2e8f0; border-radius: 16px;
+    background: #fff; font-size: 0.85rem; cursor: pointer; transition: all 0.3s;
+    font-weight: 600;
+  }
+  .level-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .level-btn.active { 
+    border-color: var(--warning); background: linear-gradient(135deg, #fffaf0, #feebc8);
+    color: #c05621; box-shadow: 0 4px 12px rgba(237,137,54,0.3);
+  }
+  
+  .num-box {
+    text-align: center; padding: 15px; background: linear-gradient(135deg, #fff5f5, #fed7d7);
+    border-radius: 16px; margin-bottom: 15px; border: 2px solid #fc8181;
+  }
+  .num-box .num { font-size: 3.5rem; font-weight: bold; color: var(--danger); }
+  .btn-refresh {
+    background: linear-gradient(135deg, #718096, #4a5568); color: #fff;
+    border: none; border-radius: 12px; padding: 10px 18px; cursor: pointer;
+    font-size: 0.95rem; margin-left: 10px;
+  }
+  
+  .requirement {
+    background: linear-gradient(135deg, #fffaf0, #feebc8);
+    padding: 18px; border-radius: 16px; text-align: center;
+    margin-bottom: 15px; border: 2px solid #fbd38d;
+  }
+  .requirement p { font-size: 1.2rem; color: #c05621; font-weight: bold; }
+  
+  .digit-box {
+    text-align: center; margin: 20px 0;
+  }
+  .digit-box label { font-size: 1.05rem; color: #4a5568; }
+  .digit-box .digit-value {
+    display: inline-block; width: 70px; height: 70px; line-height: 70px;
+    font-size: 2.5rem; font-weight: bold; color: var(--primary);
+    border: 3px dashed var(--primary); border-radius: 14px;
+    background: linear-gradient(135deg, #e6fffa, #b2f5ea);
+    margin: 0 8px; vertical-align: middle;
+  }
+  
+  .choice-box {
+    display: flex; justify-content: center; gap: 20px; margin: 25px 0;
+  }
+  .choice-btn {
+    padding: 16px 48px; font-size: 1.4rem; font-weight: bold;
+    border: 3px solid #e2e8f0; border-radius: 16px; cursor: pointer;
+    transition: all 0.3s; background: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .choice-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+  .choice-btn.shed { border-color: var(--success); color: var(--success); }
+  .choice-btn.shed.active { 
+    background: linear-gradient(135deg, var(--success), #38a169); 
+    color: #fff; box-shadow: 0 6px 20px rgba(72,187,120,0.4);
+  }
+  .choice-btn.rud { border-color: var(--danger); color: var(--danger); }
+  .choice-btn.rud.active { 
+    background: linear-gradient(135deg, var(--danger), #e53e3e); 
+    color: #fff; box-shadow: 0 6px 20px rgba(245,101,101,0.4);
+  }
+  
+  .result-msg {
+    text-align: center; padding: 18px; border-radius: 14px;
+    font-size: 1.2rem; font-weight: bold; margin-top: 15px;
+    display: none; animation: slideIn 0.4s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  .result-msg.show { display: block; }
+  .result-msg.success { 
+    background: linear-gradient(135deg, #f0fff4, #c6f6d5); 
+    color: #22543d; border: 2px solid #9ae6b4;
+  }
+  .result-msg.error { 
+    background: linear-gradient(135deg, #fff5f5, #fed7d7); 
+    color: #c53030; border: 2px solid #fc8181;
+  }
+
+  /* 开关样式 */
+  .toggle-container {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin: 20px 0; padding: 15px;
+    background: linear-gradient(135deg, #f7fafc, #edf2f7);
+    border-radius: 14px; border: 2px solid #e2e8f0;
+  }
+  .toggle-label {
+    font-size: 1.05rem; font-weight: 600; color: #4a5568;
+  }
+  .toggle-switch {
+    position: relative; width: 60px; height: 32px;
+  }
+  .toggle-switch input {
+    opacity: 0; width: 0; height: 0;
+  }
+  .toggle-slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e0;
+    transition: 0.3s; border-radius: 32px;
+  }
+  .toggle-slider:before {
+    position: absolute; content: "";
+    height: 24px; width: 24px;
+    left: 4px; bottom: 4px;
+    background-color: white;
+    transition: 0.3s; border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+  }
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(28px);
+  }
+
+  /* 答案显示区 */
+  .answer-display {
+    margin-top: 20px; padding: 20px;
+    background: linear-gradient(135deg, #e6fffa, #b2f5ea);
+    border: 3px solid #81e6d9; border-radius: 16px;
+    text-align: center; display: none;
+    animation: slideIn 0.4s ease;
+  }
+  .answer-display.show { display: block; }
+  .answer-display .label {
+    font-size: 1.1rem; color: #234e52; margin-bottom: 8px;
+  }
+  .answer-display .value {
+    font-size: 3rem; font-weight: bold;
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .answer-display .explanation {
+    font-size: 1rem; color: #4a5568; margin-top: 8px;
+  }
+
+  @media (max-width: 500px) {
+    .big-decimal { font-size: 4rem; }
+    .cards-row { grid-template-columns: repeat(2, 1fr); }
+    .num-box .num { font-size: 2.5rem; }
+    main { padding-left: 65px; }
+    .zoom-controls { left: 8px; padding: 12px 8px; }
+    .zoom-btn { width: 40px; height: 40px; font-size: 1.2rem; }
+    .choice-btn { padding: 12px 32px; font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoomPage(0.1)" title="放大">➕</button>
+  <div class="zoom-label" id="zoomLabel">100%</div>
+  <button class="zoom-btn" onclick="zoomPage(-0.1)" title="缩小">➖</button>
+  <button class="zoom-btn zoom-reset" onclick="zoomReset()" title="重置">↺</button>
+</div>
+
+<div id="scaleWrapper">
+  <header>
+    <h1>🌟 小数魔法屋</h1>
+  </header>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchTab(0)">📖 小数的读写</button>
+    <button class="nav-btn" onclick="switchTab(1)">🔮 小数的性质</button>
+    <button class="nav-btn" onclick="switchTab(2)">🎯 求近似数</button>
+  </nav>
+
+  <main>
+    <section id="lesson1" class="active">
+      <div class="big-decimal" id="dec1">12.7</div>
+      <div style="text-align:center; color:#718096; font-size:1.05rem;">👆 请大声读出上面的小数</div>
+      <div class="btn-row">
+        <button class="btn btn-correct" onclick="showReadingAnswer()">✅ 我读完了</button>
+        <button class="btn btn-next" onclick="newDecimal1()">🔄 换一题</button>
+      </div>
+      <div class="answer-box" id="answerBox1">正确答案：<span id="readAnswer"></span></div>
+    </section>
+
+    <section id="lesson2">
+      <div class="rule-tip">💡 规则：小数<strong>末尾</strong>添上或去掉 0，小数的大小不变！</div>
+      <div class="property-base" id="base2">1.4</div>
+      <div style="text-align:center; color:#718096; margin-bottom:15px;">👇 点击与上方大小相等的卡片（可多选）</div>
+      <div class="cards-row" id="cards2"></div>
+      <div class="btn-row">
+        <button class="btn btn-correct" onclick="checkProperty2()">✅ 确认</button>
+        <button class="btn btn-next" onclick="initLesson2()">🔄 换一题</button>
+      </div>
+      <div class="answer-box" id="answerBox2"></div>
+    </section>
+
+    <section id="lesson3">
+      <div class="level-bar" id="levelBar">
+        <button class="level-btn active" onclick="setLevel(0)">Level 1</button>
+        <button class="level-btn" onclick="setLevel(1)">Level 2</button>
+        <button class="level-btn" onclick="setLevel(2)">Level 3</button>
+        <button class="level-btn" onclick="setLevel(3)">🔥 混合</button>
+      </div>
+      
+      <div class="num-box">
+        <span class="num" id="dec3">23.96</span>
+        <button class="btn-refresh" onclick="genNum3()">🔄 换一题</button>
+      </div>
+      
+      <div class="requirement">
+        <p id="reqText">我要保留整数，该舍还是入？</p>
+      </div>
+      
+      <div class="digit-box">
+        <label>看下一位（<span id="digitLabel">十分位</span>）：</label>
+        <div class="digit-value" id="digitValue">8</div>
+      </div>
+      
+      <div class="choice-box">
+        <button class="choice-btn shed" id="btnShed" onclick="chooseAnswer('舍')">🔽 舍</button>
+        <button class="choice-btn rud" id="btnRud" onclick="chooseAnswer('入')">🔼 入</button>
+      </div>
+      
+      <div class="result-msg" id="resultMsg"></div>
+
+      <!-- 开关控制 -->
+      <div class="toggle-container">
+        <span class="toggle-label">🔍 显示最终答案</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="answerToggle" onchange="toggleAnswerDisplay()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- 答案显示区 -->
+      <div class="answer-display" id="answerDisplay">
+        <div class="label">🎯 四舍五入后的结果</div>
+        <div class="value" id="finalAnswer">24.0</div>
+        <div class="explanation" id="answerExplanation">因为十分位是9≥5，所以向前进1</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const rand = (a,b) => Math.random()*(b-a)+a;
+
+let currentZoom = 1.0;
+let level = 0;
+let currentNum = 0;
+let currentLookDigit = 0;
+let currentAnswer = '';
+let targetDigits = 0;
+let showAnswer = false;
+
+function switchTab(idx){
+  document.querySelectorAll('.nav-btn').forEach((b,i)=> b.classList.toggle('active',i===idx));
+  document.querySelectorAll('section').forEach((s,i)=> s.classList.toggle('active',i===idx));
+  if(idx===0) initLesson1();
+  if(idx===1) initLesson2();
+  if(idx===2) initLesson3();
+}
+
+function zoomPage(delta){
+  currentZoom = Math.max(0.5, Math.min(2.0, currentZoom + delta));
+  $('scaleWrapper').style.transform = `scale(${currentZoom})`;
+  $('zoomLabel').textContent = Math.round(currentZoom * 100) + '%';
+}
+
+function zoomReset(){
+  currentZoom = 1.0;
+  $('scaleWrapper').style.transform = 'scale(1)';
+  $('zoomLabel').textContent = '100%';
+}
+
+// 第一课：小数的读写
+const CN_DIGITS = ['零','一','二','三','四','五','六','七','八','九'];
+
+function readInteger(n){
+  if(n===0) return '零';
+  let s = n.toString(), result = '', zeroFlag = false;
+  for(let i=0; i<s.length; i++){
+    let d = parseInt(s[i]), pos = s.length - 1 - i;
+    if(d === 0) zeroFlag = true;
+    else {
+      if(zeroFlag){ result += '零'; zeroFlag = false; }
+      if(pos === 1 && d === 1 && s.length === 2) result += '十';
+      else {
+        result += CN_DIGITS[d];
+        if(pos === 1) result += '十';
+        else if(pos === 2) result += '百';
+      }
+    }
+  }
+  return result;
+}
+
+function initLesson1(){
+  let intPart = Math.floor(rand(0, 100));
+  let decPart = '';
+  for(let i=0; i<Math.floor(rand(1,4)); i++) decPart += Math.floor(rand(0,10));
+  let num = parseFloat(intPart + '.' + decPart);
+  $('dec1').textContent = num;
+  $('answerBox1').style.display = 'none';
+}
+
+function showReadingAnswer(){
+  let num = $('dec1').textContent;
+  let [intPart, decPart] = num.split('.');
+  let reading = readInteger(parseInt(intPart)) + '点' + decPart.split('').map(d=>CN_DIGITS[parseInt(d)]).join('');
+  $('readAnswer').textContent = reading;
+  $('answerBox1').style.display = 'block';
+}
+
+function newDecimal1(){ initLesson1(); }
+
+// 第二课：小数的性质
+let opts2 = [];
+
+function initLesson2(){
+  let baseInt = Math.floor(rand(0, 10));
+  let baseDec = Math.floor(rand(1, 10));
+  let baseStr = baseInt + '.' + baseDec;
+  $('base2').textContent = baseStr;
+  
+  opts2 = [
+    {valStr: baseStr + '0', correct: true},
+    {valStr: baseStr + '00', correct: true},
+    {valStr: baseInt + '.' + ((baseDec+3)%10) + '1', correct: false},
+    {valStr: baseInt + '.0' + baseDec, correct: false}
+  ].sort(()=>Math.random()-0.5);
+  
+  let container = $('cards2');
+  container.innerHTML = '';
+  opts2.forEach(opt=>{
+    let card = document.createElement('div');
+    card.className = 'p-card';
+    card.textContent = opt.valStr;
+    card.onclick = ()=> card.classList.toggle('selected');
+    container.appendChild(card);
+  });
+  $('answerBox2').style.display = 'none';
+}
+
+function checkProperty2(){
+  let cards = document.querySelectorAll('#cards2 .p-card');
+  let selected = [];
+  cards.forEach((c,i)=>{ if(c.classList.contains('selected')) selected.push(i); });
+  
+  if(selected.length === 0){
+    $('answerBox2').textContent = '⚠️ 请至少点击一张卡片！';
+    $('answerBox2').style.background = 'linear-gradient(135deg, #e6fffa, #b2f5ea)';
+    $('answerBox2').style.color = '#234e52';
+    $('answerBox2').style.display = 'block';
+    return;
+  }
+  
+  let allCorrect = selected.every(i=>opts2[i].correct) && opts2.every((o,i)=> o.correct === selected.includes(i));
+  
+  cards.forEach((c,i)=>{
+    c.classList.remove('selected');
+    c.classList.add(opts2[i].correct ? 'correct-mark' : 'wrong-mark');
+  });
+  
+  $('answerBox2').textContent = allCorrect ? '🌟 太棒了！小数末尾添0，大小不变！' : '🔍 再想想？只有末尾的0可以随意添或去哦！';
+  $('answerBox2').style.background = allCorrect ? 'linear-gradient(135deg, #f0fff4, #c6f6d5)' : 'linear-gradient(135deg, #fff5f5, #fed7d7)';
+  $('answerBox2').style.color = allCorrect ? '#22543d' : '#c53030';
+  $('answerBox2').style.display = 'block';
+}
+
+// 第三课：求近似数
+const digitNames = ['十分位','百分位','千分位'];
+
+function setLevel(lv){
+  level = lv;
+  document.querySelectorAll('.level-btn').forEach((b,i)=> b.classList.toggle('active',i===lv));
+  genNum3();
+}
+
+function genNum3(){
+  targetDigits = level === 3 ? Math.floor(rand(0,3)) : level;
+  let lookPos = targetDigits;
+  let totalDecimals = lookPos + 1;
+  
+  let intPart = Math.floor(rand(0, 50));
+  let decPart = '';
+  for(let i=0; i<totalDecimals; i++) decPart += Math.floor(rand(0,10));
+  
+  if(parseInt(decPart[lookPos]) === 0)
+    decPart = decPart.substring(0, lookPos) + Math.floor(rand(1,10)) + decPart.substring(lookPos+1);
+  
+  currentNum = parseFloat(intPart + '.' + decPart);
+  currentLookDigit = parseInt(decPart[lookPos]);
+  currentAnswer = currentLookDigit >= 5 ? '入' : '舍';
+  
+  $('dec3').textContent = currentNum;
+  $('reqText').innerHTML = `我要保留<strong>${['整数','一位小数','两位小数'][targetDigits]}</strong>，该舍还是入？`;
+  $('digitLabel').textContent = digitNames[lookPos];
+  $('digitValue').textContent = currentLookDigit;
+  
+  $('btnShed').classList.remove('active');
+  $('btnRud').classList.remove('active');
+  $('resultMsg').className = 'result-msg';
+  $('answerDisplay').classList.remove('show');
+  $('answerToggle').checked = false;
+  showAnswer = false;
+}
+
+function calculateFinalAnswer(action){
+  let numStr = currentNum.toString();
+  let [intPart, decPart] = numStr.split('.');
+  
+  if(action === '舍'){
+    // 舍：直接截断
+    if(targetDigits === 0){
+      return intPart;
+    } else {
+      return intPart + '.' + decPart.substring(0, targetDigits);
+    }
+  } else {
+    // 入：进位
+    if(targetDigits === 0){
+      // 保留整数
+      return (parseInt(intPart) + 1).toString();
+    } else {
+      // 保留小数
+      let keepPart = decPart.substring(0, targetDigits);
+      // 需要处理进位
+      let lastDigit = parseInt(keepPart[keepPart.length - 1]);
+      if(lastDigit === 9){
+        // 需要连续进位
+        let newValue = currentNum.toFixed(targetDigits);
+        // 手动进位
+        let num = parseFloat(newValue);
+        let increment = Math.pow(0.1, targetDigits);
+        return (num + increment).toFixed(targetDigits);
+      } else {
+        // 简单进位
+        let newKeep = keepPart.substring(0, keepPart.length - 1) + (lastDigit + 1);
+        return intPart + '.' + newKeep;
+      }
+    }
+  }
+}
+
+function getExplanation(action){
+  let reqNames = ['整数','一位小数','两位小数'];
+  if(action === '舍'){
+    return `${digitNames[targetDigits]}是${currentLookDigit}<5，所以直接舍去，保留${reqNames[targetDigits]}`;
+  } else {
+    return `${digitNames[targetDigits]}是${currentLookDigit}≥5，所以向前进1，得到结果`;
+  }
+}
+
+function chooseAnswer(ans){
+  $('btnShed').classList.toggle('active', ans==='舍');
+  $('btnRud').classList.toggle('active', ans==='入');
+  
+  let isCorrect = (ans === currentAnswer);
+  $('resultMsg').className = 'result-msg show ' + (isCorrect ? 'success' : 'error');
+  $('resultMsg').innerHTML = isCorrect 
+    ? `🎉 判断正确！${currentLookDigit}${currentLookDigit>=5?'≥5':'<5'}，应该"${currentAnswer}"！`
+    : `❌ 错了！下一位是 ${currentLookDigit}，应该"${currentAnswer}"`;
+  
+  // 如果开关开启，显示答案
+  if(showAnswer){
+    let finalAns = calculateFinalAnswer(ans);
+    $('finalAnswer').textContent = finalAns;
+    $('answerExplanation').textContent = getExplanation(ans);
+    $('answerDisplay').classList.add('show');
+  }
+}
+
+function toggleAnswerDisplay(){
+  showAnswer = $('answerToggle').checked;
+  if(showAnswer){
+    // 如果已经选择了舍或入，立即显示答案
+    if($('btnShed').classList.contains('active')){
+      let finalAns = calculateFinalAnswer('舍');
+      $('finalAnswer').textContent = finalAns;
+      $('answerExplanation').textContent = getExplanation('舍');
+      $('answerDisplay').classList.add('show');
+    } else if($('btnRud').classList.contains('active')){
+      let finalAns = calculateFinalAnswer('入');
+      $('finalAnswer').textContent = finalAns;
+      $('answerExplanation').textContent = getExplanation('入');
+      $('answerDisplay').classList.add('show');
+    }
+  } else {
+    $('answerDisplay').classList.remove('show');
+  }
+}
+
+function initLesson3(){ genNum3(); }
+
+window.onload = ()=>{ initLesson1(); initLesson2(); initLesson3(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>云朵字编辑器 | 多对象自由排版</title>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #4facfe;
+      --primary-hover: #3b9be9;
+      --danger: #ff6b6b;
+      --danger-hover: #fa5252;
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #2c3e50;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header { background: var(--card); padding: 16px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header p { font-size: 0.85rem; color: #666; display: none; }
+    @media(min-width: 768px) { header p { display: block; } }
+
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    @media (max-width: 960px) { .workspace { grid-template-columns: 1fr; } }
+
+    /* 左侧面板 */
+    .sidebar {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      max-height: calc(100vh - 100px);
+    }
+    
+    .panel-section { border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+    .panel-section:last-child { border-bottom: none; padding-bottom: 0; }
+    .panel-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; color: #444; display: flex; align-items: center; gap: 6px; }
+    
+    .control-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; }
+    .control-row > div { flex: 1; min-width: 0; }
+    label { display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px; font-weight: 500; }
+    input[type="text"], select { width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.85rem; outline: none; transition: 0.2s; background: #fafbfc; }
+    input:focus, select:focus { border-color: var(--primary); background: white; }
+    
+    input[type="color"] { width: 36px; height: 36px; padding: 0; border: none; cursor: pointer; background: none; border-radius: 6px; }
+    
+    .slider-container { margin: 6px 0; }
+    .slider-header { display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 2px; }
+    input[type="range"] { width: 100%; height: 4px; accent-color: var(--primary); cursor: pointer; }
+    
+    .btn { width: 100%; padding: 9px 12px; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .btn-secondary { background: #f1f5f9; color: #475569; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    
+    .object-list { max-height: 160px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px; background: #fafbfc; }
+    .object-item { padding: 7px 8px; background: white; border-radius: 6px; margin-bottom: 3px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; border: 1px solid transparent; }
+    .object-item:hover { background: #f1f5f9; }
+    .object-item.active { background: #dbeafe; border-color: #93c5fd; }
+    
+    /* 右侧画布区 */
+    .canvas-area {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 600px;
+    }
+    .canvas-toolbar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafbfc; flex-wrap: wrap; gap: 8px; }
+    .canvas-toolbar span { font-size: 0.8rem; color: #64748b; }
+    .toolbar-actions { display: flex; gap: 8px; }
+    .toolbar-actions .btn { width: auto; padding: 6px 12px; font-size: 0.8rem; }
+    
+    .canvas-viewport {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background: #f1f5f9;
+      padding: 20px;
+      overflow: auto;
+    }
+    #mainCanvas {
+      max-width: 100%;
+      max-height: 80vh;
+      background: white;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      border-radius: 4px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    
+    .tips-bar { padding: 8px 16px; background: #fafbfc; border-top: 1px solid var(--border); font-size: 0.75rem; color: #94a3b8; text-align: center; }
+    
+    /* 模态框 */
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 24px; border-radius: 14px; text-align: center; max-width: 360px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    .pay-qr { width: 180px; height: auto; margin: 12px auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+    .pay-qr img { width: 100%; display: block; }
+    .close-modal { margin-top: 12px; background: transparent; color: #888; border: none; cursor: pointer; text-decoration: underline; font-size: 0.85rem; }
+    
+    footer { text-align: center; padding: 12px; font-size: 0.7rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>☁️ 云朵字编辑器</h1>
+    <p>自由拖拽 · 旋转缩放 · 多对象排版 · A4输出</p>
+  </div>
+  <button class="btn btn-secondary" style="width:auto;" onclick="openPayModal()">☕ 支持作者</button>
+</header>
+
+<div class="workspace">
+  <!-- 左侧控制面板 -->
+  <aside class="sidebar">
+    <div class="panel-section">
+      <div class="panel-title">➕ 添加元素</div>
+      <input type="text" id="textInput" placeholder="输入文字 (如：重点)" value="云朵字" maxlength="10">
+      <div class="control-row">
+        <div style="flex:0 0 40px;"><input type="color" id="colorPicker" value="#FF4500"></div>
+        <div><input type="text" id="colorHex" value="#FF4500" placeholder="#FF4500"></div>
+      </div>
+      <select id="fontSelect">
+        <option value="'Microsoft YaHei', sans-serif">黑体</option>
+        <option value="'SimSun', serif">宋体</option>
+        <option value="'KaiTi', serif">楷体</option>
+        <option value="'LiSu', serif">隶书</option>
+        <option value="'STHeiti', '华文黑体'">华文黑体</option>
+        <option value="'STKaiti', '华文楷体'">华文楷体</option>
+      </select>
+      <div class="slider-container">
+        <div class="slider-header"><span>初始大小</span><span id="initSizeValue">100px</span></div>
+        <input type="range" id="initSizeRange" min="30" max="250" value="100">
+      </div>
+      <button class="btn btn-primary" onclick="addCloudText()">添加到画布</button>
+    </div>
+    
+    <div class="panel-section">
+      <div class="panel-title">📋 图层列表</div>
+      <div class="object-list" id="objectList">
+        <div style="color:#94a3b8; font-size:0.8rem; text-align:center; padding:16px;">暂无对象</div>
+      </div>
+    </div>
+    
+    <div class="panel-section" id="editControls" style="display:none;">
+      <div class="panel-title">🎨 编辑选中</div>
+      <div class="control-row">
+        <div style="flex:0 0 36px;"><input type="color" id="editColorPicker" value="#FF4500"></div>
+        <div style="flex:1;"><label>云朵颜色</label></div>
+      </div>
+      <div class="slider-container">
+        <div class="slider-header"><span>缩放</span><span id="sizeValue">100%</span></div>
+        <input type="range" id="sizeRange" min="10" max="600" value="100">
+      </div>
+      <div class="slider-container">
+        <div class="slider-header"><span>旋转</span><span id="rotateValue">0°</span></div>
+        <input type="range" id="rotateRange" min="-180" max="180" value="0">
+      </div>
+      <button class="btn btn-danger" onclick="deleteSelected()">🗑️ 删除选中</button>
+    </div>
+  </aside>
+  
+  <!-- 右侧画布区域 -->
+  <section class="canvas-area">
+    <div class="canvas-toolbar">
+      <span>📐 A4 画布 (1240×1754) | 导出即高清</span>
+      <div class="toolbar-actions">
+        <button class="btn btn-secondary" onclick="clearCanvas()">清空</button>
+        <button class="btn btn-primary" onclick="exportPNG()">导出 PNG</button>
+        <button class="btn btn-primary" onclick="exportPDF()">导出 PDF</button>
+      </div>
+    </div>
+    
+    <div class="canvas-viewport">
+      <canvas id="mainCanvas"></canvas>
+    </div>
+    
+    <div class="tips-bar">
+      🖱️ 拖拽移动 · 🔄 滚轮缩放 · ⌨️ Delete 删除 · 📏 右侧面板精确调节
+    </div>
+  </section>
+</div>
+
+<!-- 捐赠模态框 -->
+<div class="modal" id="payModal">
+  <div class="modal-content">
+    <h3>❤️ 感谢支持</h3>
+    <p style="color:#666; font-size:0.85rem; margin:8px 0;">工具免费使用，扫码请作者喝杯咖啡</p>
+    <div class="pay-qr">
+      <img src="coffee.png" alt="收款码" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22180%22 height=%22180%22%3E%3Crect fill=%22%23f8f9fa%22 width=%22180%22 height=%22180%22/%3E%3Ctext fill=%22%23999%22 x=%2290%22 y=%2290%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2212%22%3E替换二维码%3C/text%3E%3C/svg%3E'">
+    </div>
+    <button class="close-modal" onclick="closePayModal()">关闭</button>
+  </div>
+</div>
+
+<footer>© 2026 教师工具站 | 纯前端计算 | 本地运行</footer>
+
+<script>
+// A4 内部分辨率 (150 DPI)
+const A4_W = 1240, A4_H = 1754;
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = A4_W;
+canvas.height = A4_H;
+
+let objects = [], selected = null, dragging = false, offset = {x:0, y:0}, idSeq = 0;
+
+class Cloud {
+  constructor(txt, col, sz, font, x, y) {
+    this.id = ++idSeq; this.txt = txt; this.col = col; this.sz = sz; this.font = font;
+    this.x = x; this.y = y; this.scale = 1; this.rot = 0;
+  }
+  draw(c) {
+    c.save();
+    c.translate(this.x, this.y);
+    c.rotate(this.rot * Math.PI/180);
+    c.scale(this.scale, this.scale);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `900 ${this.sz}px ${this.font}`;
+    
+    // 云朵层
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    c.strokeStyle = this.col;
+    c.lineWidth = this.sz * 0.45;
+    c.shadowColor = this.col; c.shadowBlur = this.sz * 0.25;
+    c.strokeText(this.txt, 0, 0);
+    
+    // 黑边
+    c.shadowBlur = 0; c.lineWidth = this.sz * 0.18; c.strokeStyle = '#000';
+    c.strokeText(this.txt, 0, 0);
+    
+    // 白芯
+    c.fillStyle = '#FFF'; c.fillText(this.txt, 0, 0);
+    c.restore();
+    
+    if (selected === this) {
+      c.save(); c.translate(this.x, this.y); c.rotate(this.rot * Math.PI/180); c.scale(this.scale, this.scale);
+      c.font = `900 ${this.sz}px ${this.font}`;
+      const m = c.measureText(this.txt);
+      const w = m.width + this.sz*0.5, h = this.sz*1.2;
+      c.strokeStyle = '#4facfe'; c.lineWidth = 2; c.setLineDash([5,5]);
+      c.strokeRect(-w/2, -h/2, w, h);
+      c.restore();
+    }
+  }
+  hit(px, py) {
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot*Math.PI/180); ctx.scale(this.scale, this.scale);
+    ctx.font = `900 ${this.sz}px ${this.font}`;
+    const m = ctx.measureText(this.txt);
+    const w = m.width + this.sz*0.5, h = this.sz*1.2;
+    ctx.restore();
+    return px >= this.x-w/2 && px <= this.x+w/2 && py >= this.y-h/2 && py <= this.y+h/2;
+  }
+}
+
+function addCloudText() {
+  const t = document.getElementById('textInput').value.trim() || '文字';
+  const c = document.getElementById('colorHex').value;
+  const s = +document.getElementById('initSizeRange').value;
+  const f = document.getElementById('fontSelect').value;
+  const o = new Cloud(t, c, s, f, A4_W/2 + (Math.random()-0.5)*150, A4_H/2 + (Math.random()-0.5)*150);
+  objects.push(o); select(o); render(); updateList();
+}
+
+function select(o) {
+  selected = o; updateList(); updateEdit(); render();
+}
+function deleteSelected() {
+  if(!selected) return;
+  objects = objects.filter(o => o !== selected);
+  selected = null; updateEdit(); updateList(); render();
+}
+function clearCanvas() { if(objects.length && confirm('清空画布？')) { objects=[]; selected=null; updateEdit(); updateList(); render(); } }
+
+function updateList() {
+  const el = document.getElementById('objectList');
+  if(!objects.length) { el.innerHTML = '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:16px;">暂无对象</div>'; return; }
+  el.innerHTML = objects.map(o => `<div class="object-item ${selected===o?'active':''}" onclick="selectById(${o.id})"><span>${o.txt}</span><span onclick="event.stopPropagation();deleteById(${o.id})" style="color:#ff6b6b;cursor:pointer;">✕</span></div>`).join('');
+}
+function selectById(id) { select(objects.find(o=>o.id===id)); }
+function deleteById(id) { const o=objects.find(x=>x.id===id); if(o){ if(selected===o){selected=null; updateEdit();} objects=objects.filter(x=>x.id!==id); updateList(); render(); } }
+
+function updateEdit() {
+  const el = document.getElementById('editControls');
+  if(!selected) { el.style.display='none'; return; }
+  el.style.display='block';
+  document.getElementById('editColorPicker').value = selected.col;
+  document.getElementById('sizeRange').value = Math.round(selected.scale*100);
+  document.getElementById('sizeValue').textContent = Math.round(selected.scale*100)+'%';
+  document.getElementById('rotateRange').value = selected.rot;
+  document.getElementById('rotateValue').textContent = selected.rot+'°';
+}
+
+function render() {
+  ctx.fillStyle='#FFF'; ctx.fillRect(0,0,A4_W,A4_H);
+  objects.forEach(o => o.draw(ctx));
+}
+
+// 交互事件
+canvas.addEventListener('mousedown', e => {
+  const r = canvas.getBoundingClientRect();
+  const x = (e.clientX-r.left)*(A4_W/r.width), y = (e.clientY-r.top)*(A4_H/r.height);
+  for(let i=objects.length-1;i>=0;i--) if(objects[i].hit(x,y)) { select(objects[i]); dragging=true; offset.x=x-objects[i].x; offset.y=y-objects[i].y; return; }
+  select(null);
+});
+canvas.addEventListener('mousemove', e => {
+  if(!dragging||!selected) return;
+  const r = canvas.getBoundingClientRect();
+  selected.x = (e.clientX-r.left)*(A4_W/r.width) - offset.x;
+  selected.y = (e.clientY-r.top)*(A4_H/r.height) - offset.y;
+  render();
+});
+canvas.addEventListener('mouseup', () => dragging=false);
+canvas.addEventListener('wheel', e => {
+  if(!selected) return; e.preventDefault();
+  selected.scale *= e.deltaY>0?0.9:1.1;
+  selected.scale = Math.max(0.05, Math.min(6, selected.scale));
+  updateEdit(); render();
+}, {passive:false});
+
+document.addEventListener('keydown', e => { if((e.key==='Delete'||e.key==='Backspace') && selected && document.activeElement.tagName!=='INPUT') deleteSelected(); });
+
+document.getElementById('editColorPicker').addEventListener('input', e => { if(selected){selected.col=e.target.value; render();} });
+document.getElementById('sizeRange').addEventListener('input', e => { if(selected){selected.scale=+e.target.value/100; document.getElementById('sizeValue').textContent=e.target.value+'%'; render();} });
+document.getElementById('rotateRange').addEventListener('input', e => { if(selected){selected.rot=+e.target.value; document.getElementById('rotateValue').textContent=e.target.value+'°'; render();} });
+
+const cp=document.getElementById('colorPicker'), ch=document.getElementById('colorHex');
+cp.addEventListener('input', e=>ch.value=e.target.value); ch.addEventListener('input', e=>cp.value=e.target.value);
+document.getElementById('initSizeRange').addEventListener('input', e=>document.getElementById('initSizeValue').textContent=e.target.value+'px');
+
+function exportPNG() {
+  if(!objects.length) return alert('画布为空');
+  const prev=selected; selected=null; render();
+  const a=document.createElement('a'); a.download=`云朵字_A4_${Date.now()}.png`; a.href=canvas.toDataURL('image/png'); a.click();
+  selected=prev; render();
+}
+async function exportPDF() {
+  if(!objects.length) return alert('画布为空');
+  const {jsPDF}=window.jspdf; const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const prev=selected; selected=null; render();
+  pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,0,210,297); pdf.save(`云朵字_A4_${Date.now()}.pdf`);
+  selected=prev; render();
+}
+
+function openPayModal(){document.getElementById('payModal').classList.add('active');}
+function closePayModal(){document.getElementById('payModal').classList.remove('active');}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "tools": [
+    {
+      "name": "云朵字生成器",
+      "file": "cloud-text.html",
+      "icon": "fa-cloud",
+      "gradient": "linear-gradient(135deg, #4facfe, #00f2fe)",
+      "category": ["design", "teaching"],
+      "description": "制作可爱的云朵风格文字，支持多种字体、颜色自定义，一键导出A4尺寸PNG/PDF，适用于课件、海报制作。",
+      "tags": ["免费", "A4导出", "多字体"]
+    },
+    {
+      "name": "小数魔法屋",
+      "file": "xiaoshu.html",
+      "icon": "fa-calculator",
+      "gradient": "linear-gradient(135deg, #f093fb, #f5576c)",
+      "category": ["teaching", "math"],
+      "description": "小学数学互动神器！包含小数读写、性质、近似数四舍五入练习，支持多难度分级。",
+      "tags": ["免费", "小学数学", "互动"]
+    },
+    {
+      "name": "PDF预览排序合并工具",
+      "file": "pdf-merge.html",
+      "icon": "fa-file-pdf",
+      "gradient": "linear-gradient(135deg, #fa709a, #fee140)",
+      "category": ["office", "teaching"],
+      "description": "上传多个PDF文件，预览每一页内容，拖拽调整顺序，按需合并试卷、教案或学生作品。纯本地运行，保护隐私。",
+      "tags": ["免费", "纯本地", "拖拽排序"]
+    }
+  ]
+}

@@ -112,9 +112,14 @@ class PM{
   _ck(){if(!this.d)return false;if(this.d.e&&Date.now()>this.d.e){localStorage.removeItem(STORAGE_KEY);this.d=null;return false;}return true;}
   async act(k){
     k=k.trim();if(!k.startsWith('TEACHERPRO-'))return{o:0,m:'格式错误'};
-    try{const p=JSON.parse(atob(k.replace('TEACHERPRO-','')));const s=await this._h(p.t+p.i+p.e+p.d);
-    if(s!==p.s)return{o:0,m:'签名无效'};this.d={t:p.t,i:p.i,e:p.e,d:p.d||'dev_'+Math.random().toString(36).slice(2),a:Date.now()};
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(this.d));this.p=true;return{o:1,m:p.t==='permanent'?'永久会员':'30天会员'}}
+    try{
+      const p=JSON.parse(atob(k.replace('TEACHERPRO-','')));
+      // 🔑 核心修复：使用完全相同的 JSON 格式重建签名数据进行比对
+      const signData = JSON.stringify({ t: p.t, i: p.i, e: p.e, d: p.d });
+      const s=await this._h(signData);
+      if(s!==p.s)return{o:0,m:'签名无效'};
+      this.d={t:p.t,i:p.i,e:p.e,d:p.d||'dev_'+Math.random().toString(36).slice(2),a:Date.now()};
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(this.d));this.p=true;return{o:1,m:p.t==='permanent'?'永久会员':'30天会员'}}
     catch(e){return{o:0,m:'解析失败'}}}
   async _h(t){const e=new TextEncoder(),k=await crypto.subtle.importKey('raw',e.encode(SECRET_KEY),{name:'HMAC',hash:'SHA-256'},false,['sign']);
   return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',k,e.encode(t)))).map(b=>b.toString(16).padStart(2,'0')).join('');}

@@ -3,100 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>卡密生成器</title>
-  <!-- 1. 引入全局配置 -->
+  <title>卡密生成器 | 教师工具站</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- 引入全局配置 -->
   <script src="config.js"></script>
   <style>
+    :root{--primary:#4facfe;--bg:#f8fafc;--card:#fff;--text:#1e293b;--light:#64748b;--border:#e2e8f0}
     *{box-sizing:border-box;font-family:system-ui,sans-serif}
-    body{background:#f8fafc;padding:40px 20px;display:flex;justify-content:center}
-    .box{background:#fff;padding:30px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);width:100%;max-width:500px}
-    h2{text-align:center;margin-bottom:20px;color:#1e293b}
-    label{display:block;font-size:0.9rem;color:#64748b;margin-bottom:6px;font-weight:500}
-    input,select,textarea{width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:1rem;margin-bottom:15px;outline:none}
-    input:focus,select:focus{border-color:#4facfe}
-    .row{display:flex;gap:15px}
-    .row>div{flex:1}
-    button{width:100%;padding:14px;background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:0.2s}
-    button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(79,172,254,0.4)}
-    .output-area{position:relative}
-    textarea{height:100px;resize:none;font-family:monospace;background:#f1f5f9}
-    .copy-btn{position:absolute;top:8px;right:8px;background:#fff;border:1px solid #e2e8f0;padding:4px 10px;border-radius:6px;font-size:0.8rem;cursor:pointer}
-    .copy-btn:hover{background:#e2e8f0}
-    .tip{font-size:0.8rem;color:#94a3b8;text-align:center;margin-top:10px}
+    body{background:var(--bg);color:var(--text);padding:20px}
+    nav{max-width:1200px;margin:0 auto 20px;display:flex;justify-content:space-between;align-items:center}
+    .logo{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--primary),#667eea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none}
+    .container{max-width:800px;margin:0 auto}
+    .card{background:var(--card);padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.05);margin-bottom:20px}
+    h2{margin-bottom:15px}
+    .form-group{margin-bottom:15px}
+    label{display:block;font-size:0.9rem;color:var(--light);margin-bottom:6px}
+    input,select{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:1rem;outline:none}
+    input:focus,select:focus{border-color:var(--primary)}
+    button{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:0.2s}
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{opacity:0.9}
+    .btn-copy{background:#10b981;color:#fff;padding:6px 12px;font-size:0.85rem}.btn-copy:hover{opacity:0.9}
+    textarea{width:100%;height:100px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:monospace;font-size:0.9rem;resize:none}
+    .tip{font-size:0.8rem;color:var(--light);margin-top:10px}
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>🔑 卡密生成器</h2>
-    <label>🔐 发卡密钥 (从 config.js 自动读取)</label>
-    <input type="text" id="secretKeyDisplay" disabled placeholder="加载配置中...">
-    
-    <div class="row">
-      <div>
+  <nav>
+    <a href="index.html" class="logo"><i class="fas fa-key"></i> 卡密生成器</a>
+    <a href="index.html" class="btn btn-primary" style="width:auto">← 返回主页</a>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h2>🔐 生成新卡密</h2>
+      <div class="form-group">
+        <label>🔑 发卡密钥（自动读取 config.js）</label>
+        <input type="text" id="secretKey" disabled placeholder="加载配置中...">
+      </div>
+      <div class="form-group">
         <label>⏱️ 会员类型</label>
-        <select id="cardType">
+        <select id="keyType">
           <option value="30d">30 天会员</option>
           <option value="permanent">永久会员</option>
         </select>
       </div>
-      <div>
-        <label>📅 额外赠送 (天)</label>
+      <div class="form-group">
+        <label>📅 额外赠送天数（仅 30 天会员有效）</label>
         <input type="number" id="bonusDays" value="0" min="0">
       </div>
+      <button class="btn btn-primary" onclick="generateKey()">生成卡密</button>
     </div>
-    
-    <button onclick="generate()">✨ 生成卡密</button>
-    
-    <div class="output-area">
-      <label>📋 生成的卡密</label>
-      <textarea id="output" readonly></textarea>
-      <button class="copy-btn" onclick="copyKey()">复制</button>
+
+    <div class="card">
+      <h2>📋 生成的卡密</h2>
+      <textarea id="outputKey" readonly placeholder="生成的卡密将显示在这里..."></textarea>
+      <button class="btn btn-copy" style="margin-top:10px" onclick="copyKey()"><i class="fas fa-copy"></i> 复制卡密</button>
+      <p class="tip">💡 提示：此工具纯本地运行，断网可用。请妥善保管密钥，勿泄露。</p>
     </div>
-    
-    <p class="tip">💡 提示：此工具读取 config.js 中的密钥，确保与网站一致。</p>
   </div>
 
   <script>
-    // 2. 初始化时显示配置中的密钥
+    // 页面加载时显示配置的密钥
     window.onload = () => {
-        document.getElementById('secretKeyDisplay').value = SITE_CONFIG.SECRET_KEY;
+        document.getElementById('secretKey').value = SITE_CONFIG.SECRET_KEY;
     };
 
-    async function generate() {
-      const key = SITE_CONFIG.SECRET_KEY; // 直接使用配置文件的密钥
-      
-      const type = document.getElementById('cardType').value;
+    async function generateKey() {
+      const secretKey = SITE_CONFIG.SECRET_KEY; // 使用配置文件中的密钥
+      if (!secretKey) {
+        alert('⚠️ 未找到密钥配置，请检查 config.js');
+        return;
+      }
+
+      const type = document.getElementById('keyType').value;
       const bonus = parseInt(document.getElementById('bonusDays').value) || 0;
       const issue = Date.now();
       const days = type === '30d' ? 30 + bonus : 0;
       const expiry = days > 0 ? issue + days * 24 * 60 * 60 * 1000 : null;
-      
-      const payload = { t: type, i: issue, e: expiry, d: "" };
-      const dataStr = JSON.stringify(payload);
-      
+
+      const payload = { t: type, i: issue, e: expiry, d: '' };
+      // 🔑 核心修复：统一使用 JSON 字符串作为签名源数据
+      const signData = JSON.stringify(payload);
+
       try {
         const enc = new TextEncoder();
-        const cryptoKey = await crypto.subtle.importKey(
-          'raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        const key = await crypto.subtle.importKey(
+          'raw', enc.encode(secretKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
         );
-        const sigBuffer = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(dataStr));
+        const sigBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(signData));
         const sig = Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        
+
         payload.s = sig;
         const base64 = btoa(JSON.stringify(payload));
-        document.getElementById('output').value = `TEACHERPRO-${base64}`;
+        document.getElementById('outputKey').value = `TEACHERPRO-${base64}`;
       } catch (e) {
         alert('❌ 生成失败：' + e.message);
       }
     }
 
     function copyKey() {
-      const el = document.getElementById('output');
-      el.select();
-      document.execCommand('copy');
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = '已复制!';
-      setTimeout(() => btn.textContent = '复制', 1500);
+      const output = document.getElementById('outputKey');
+      output.select();
+      navigator.clipboard.writeText(output.value).then(() => {
+        alert('✅ 已复制到剪贴板');
+      });
     }
   </script>
 </body>

@@ -5,8 +5,8 @@
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>云朵字编辑器 | 会员版</title>
  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+ <!-- 1. 引入全局配置 -->
  <script src="config.js"></script>
- <script src="tt-core.js"></script>
  <style>
  :root{--primary:#4facfe;--primary-dark:#00f2fe;--bg:#f4f9fc;--card:#fff;--text:#2c3e50;--border:#e2e8f0;--danger:#ff6b6b;--success:#10b981;--gold:#fbbf24}
  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif;user-select:none}
@@ -47,16 +47,25 @@
  .tips{padding:8px 16px;background:#fafbfc;border-top:1px solid var(--border);font-size:.75rem;color:#94a3b8;text-align:center}
  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
  .modal.active{display:flex}
- .modal-content{background:#fff;padding:24px;border-radius:16px;width:90%;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,.2);text-align:center}
+ .modal-content{background:#fff;padding:24px;border-radius:16px;width:90%;max-width:420px;box-shadow:0 20px 40px rgba(0,0,0,.2);text-align:center}
  .close-modal{margin-top:15px;background:none;border:none;color:#888;cursor:pointer;text-decoration:underline}
  footer{text-align:center;padding:12px;font-size:.75rem;color:#94a3b8}
+ 
+ /* 新增支付界面样式 */
+ .pay-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 15px 0; }
+ .pay-tab { flex: 1; padding: 10px; cursor: pointer; font-size: 0.9rem; color: var(--light); }
+ .pay-tab.active { color: var(--gold); border-bottom: 2px solid var(--gold); font-weight: bold; }
+ .pay-panel { display: none; padding: 10px 0; }
+ .pay-panel.active { display: block; }
+ .qr-box { width: 150px; height: 150px; background: #eee; margin: 10px auto; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+ .qr-box img { max-width: 100%; }
+ .auto-link { display: block; background: #fef3c7; color: #b45309; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: 1px dashed #f59e0b; }
  </style>
 </head>
 <body>
 <header>
  <h1>☁️ 云朵字编辑器</h1>
  <div class="header-right">
- <button class="btn btn-primary" onclick="sharePoster()"><i class="fas fa-share-alt"></i> 分享海报</button>
  <div id="statusBadge" class="status-badge status-free">🔒 免费用户</div>
  <button class="btn btn-gold" onclick="openPayModal()">🔑 激活会员</button>
  </div>
@@ -102,21 +111,47 @@
 <div class="modal" id="payModal">
  <div class="modal-content">
  <h3>👑 激活高级会员</h3>
- <p style="font-size:0.75rem; color:#64748b; margin-bottom:10px">设备ID: <span id="curDevID" style="color:var(--primary); font-weight:bold"></span></p>
- <input type="text" id="keyInput" placeholder="输入卡密 (TEACHERPRO-...)" style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:8px;font-size:1rem;margin-bottom:12px">
- <button class="btn btn-gold" style="width:100%" onclick="doActivate()">立即激活</button>
- <p id="actMsg" style="margin-top:10px;font-size:.9rem;min-height:1.5em"></p>
- <button class="close-modal" onclick="closePayModal()">关闭</button>
+ 
+ <!-- 支付选项切换 -->
+ <div class="pay-tabs">
+    <div class="pay-tab active" onclick="switchPay(0)">自动发卡</div>
+    <div class="pay-tab" onclick="switchPay(1)">扫码支付</div>
+    <div class="pay-tab" onclick="switchPay(2)">激活卡密</div>
+ </div>
+
+ <!-- 自动发卡面板 -->
+ <div class="pay-panel active" id="payPanel0">
+    <a href="#" id="fakaLink" target="_blank" class="auto-link">🚀 前往自动化发卡平台 (秒发卡密)</a>
+    <p style="font-size:0.8rem; color:var(--light)">推荐使用，支付后自动发送卡密到您的邮箱</p>
+ </div>
+
+ <!-- 扫码面板 -->
+ <div class="pay-panel" id="payPanel1">
+    <div style="display:flex; justify-content:space-around">
+        <div><div class="qr-box"><img id="wxQR" src="" alt="微信"></div><span style="font-size:0.7rem">微信支付</span></div>
+        <div><div class="qr-box"><img id="aliQR" src="" alt="支付宝"></div><span style="font-size:0.7rem">支付宝</span></div>
+    </div>
+    <p style="font-size:0.8rem; margin-top:10px">扫码支付后请联系：<b id="contactEmail"></b></p>
+ </div>
+
+ <!-- 激活面板 -->
+ <div class="pay-panel" id="payPanel2">
+    <input type="text" id="keyInput" placeholder="输入卡密 (TEACHERPRO-...)" style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:8px;font-size:1rem;margin-bottom:12px">
+    <button class="btn btn-gold" style="width:100%" onclick="doActivate()">立即激活</button>
+    <p id="actMsg" style="margin-top:10px;font-size:.9rem;min-height:1.5em"></p>
+ </div>
+
+ <button class="close-modal" onclick="closePayModal()">暂时取消</button>
  </div>
 </div>
 
 <script>
-TT_SDK.getFingerprint().then(id => { if(document.getElementById('curDevID')) document.getElementById('curDevID').innerText = id; });
-
-const SECRET_KEY = SITE_CONFIG.SECRET_KEY;
+// 2. 使用全局配置中的密钥和存储键
+const SECRET_KEYS = SITE_CONFIG.SECRET_KEYS;
 const LICENSE_KEY = SITE_CONFIG.STORAGE.LICENSE;
 const USAGE_KEY = SITE_CONFIG.STORAGE.USAGE;
 
+// 会员管理器
 class PremiumManager {
  constructor() {
  this.data = JSON.parse(localStorage.getItem(LICENSE_KEY) || "null");
@@ -132,27 +167,36 @@ class PremiumManager {
  if (!key.startsWith('TEACHERPRO-')) return { ok: false, msg: '❌ 卡密格式错误' };
  try {
  const p = JSON.parse(atob(key.replace('TEACHERPRO-', '')));
+ // 🔑 核心修复：使用完全相同的 JSON 格式重建签名数据进行比对
  const signData = JSON.stringify({ t: p.t, i: p.i, e: p.e, d: p.d });
- const sig = await this._hmac(signData);
- if (sig !== p.s) return { ok: false, msg: '❌ 卡密签名无效' };
- const curFinger = await TT_SDK.getFingerprint();
- if (p.d && p.d !== "" && !p.d.split(',').includes(curFinger)) { return { ok: false, msg: '❌ 已绑定其他设备' }; }
- this.data = { t: p.t, i: p.i, e: p.e, d: p.d || curFinger, a: Date.now() };
+ 
+ let isValid = false;
+ // 遍历所有密钥尝试验证（确保旧密钥卡密依然有效）
+ for(const sk of SECRET_KEYS) {
+    const sig = await this._hmac(signData, sk);
+    if (sig === p.s) { isValid = true; break; }
+ }
+ 
+ if (!isValid) return { ok: false, msg: '❌ 卡密签名无效' };
+ 
+ const device = 'dev_' + Math.abs([navigator.userAgent, screen.width].join('').split('').reduce((a, c) => a + c.charCodeAt(0), 0)).toString(36);
+ this.data = { t: p.t, i: p.i, e: p.e, d: p.d || device, a: Date.now() };
  localStorage.setItem(LICENSE_KEY, JSON.stringify(this.data));
  this.isPro = true;
- return { ok: true, msg: '✅ 激活成功' };
- } catch (e) { return { ok: false, msg: '❌ 解析失败' }; }
+ return { ok: true, msg: p.t === 'permanent' ? '✅ 永久会员激活成功' : '✅ 30 天会员激活成功' };
+ } catch (e) { return { ok: false, msg: '❌ 卡密解析失败' }; }
  }
  clear() { localStorage.removeItem(LICENSE_KEY); this.data = null; this.isPro = false; }
- async _hmac(t) {
+ async _hmac(t, sk) {
  const enc = new TextEncoder();
- const k = await crypto.subtle.importKey('raw', enc.encode(SECRET_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+ const k = await crypto.subtle.importKey('raw', enc.encode(sk), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
  const s = await crypto.subtle.sign('HMAC', k, enc.encode(t));
  return Array.from(new Uint8Array(s)).map(b => b.toString(16).padStart(2, '0')).join('');
  }
 }
 const premium = new PremiumManager();
 
+// 限额管理器
 function getUsage() {
  const today = new Date().toISOString().slice(0, 10);
  let u = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
@@ -165,27 +209,25 @@ function updateUI() {
  const btnP = document.getElementById('btnPng');
  const btnF = document.getElementById('btnPdf');
  const u = getUsage();
+
  if (premium.isPro) {
- badge.innerHTML = '👑 会员用户'; badge.className = 'status-badge status-pro';
+ badge.innerHTML = '👑 会员用户 (无限)';
+ badge.className = 'status-badge status-pro';
  btnP.disabled = false; btnP.textContent = '📥 导出 PNG';
  btnF.disabled = false; btnF.textContent = '📄 导出 PDF';
  } else {
  const pLeft = Math.max(0, 1 - u.png);
  const fLeft = Math.max(0, 1 - u.pdf);
- badge.innerHTML = '🔒 免费用户'; badge.className = 'status-badge status-free';
- btnP.disabled = pLeft <= 0; btnP.textContent = pLeft > 0 ? '📥 导出 PNG' : '🔒 PNG 已用尽';
- btnF.disabled = fLeft <= 0; btnF.textContent = fLeft > 0 ? '📄 导出 PDF' : '🔒 PDF 已用尽';
+ badge.innerHTML = '🔒 免费用户';
+ badge.className = 'status-badge status-free';
+ btnP.disabled = pLeft <= 0;
+ btnP.textContent = pLeft > 0 ? '📥 导出 PNG' : '🔒 PNG 已用尽';
+ btnF.disabled = fLeft <= 0;
+ btnF.textContent = fLeft > 0 ? '📄 导出 PDF' : '🔒 PDF 已用尽';
  }
 }
 
-async function sharePoster() {
-    const prev = selected; selected = null; render();
-    const url = await TT_SDK.makePoster(canvas, "我的云朵字作品分享");
-    const w = window.open();
-    w.document.write(`<div style="text-align:center; padding:20px; background:#f8fafc; min-height:100vh"><img src="${url}" style="max-width:450px; box-shadow:0 30px 60px rgba(0,0,0,0.2); border-radius:12px; border:8px solid #fff"><p style="margin-top:20px; font-family:sans-serif; color:#64748b">✨ 长按图片保存并分享</p></div>`);
-    selected = prev; render();
-}
-
+// 画布核心逻辑
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 const W = 1240, H = 1754;
@@ -204,7 +246,8 @@ class CloudObj {
  if (selected === this) {
  c.save(); c.translate(this.x, this.y); c.rotate(this.rot * Math.PI / 180); c.scale(this.sc, this.sc);
  c.font = `900 ${this.sz}px ${this.font}`;
- const m = c.measureText(this.txt); const w = m.width + this.sz * 0.5, h = this.sz * 1.2;
+ const m = c.measureText(this.txt);
+ const w = m.width + this.sz * 0.5, h = this.sz * 1.2;
  c.strokeStyle = '#4facfe'; c.lineWidth = 2; c.setLineDash([5, 5]);
  c.strokeRect(-w/2, -h/2, w, h); c.restore();
  }
@@ -212,15 +255,11 @@ class CloudObj {
  hit(px, py) {
  ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot * Math.PI / 180); ctx.scale(this.sc, this.sc);
  ctx.font = `900 ${this.sz}px ${this.font}`;
- const m = ctx.measureText(this.txt); const w = m.width + this.sz * 0.5, h = this.sz * 1.2;
+ const m = ctx.measureText(this.txt);
+ const w = m.width + this.sz * 0.5, h = this.sz * 1.2;
  ctx.restore();
  return px >= this.x - w/2 && px <= this.x + w/2 && py >= this.y - h/2 && py <= this.y + h/2;
  }
-}
-
-function render() {
- ctx.fillStyle='#FFF'; ctx.fillRect(0,0,W,H); objects.forEach(o=>o.draw(ctx));
- localStorage.setItem('tt_cloud_text_objs_v2', JSON.stringify(objects));
 }
 
 function addObj() {
@@ -228,7 +267,7 @@ function addObj() {
  const c = document.getElementById('colorHex').value;
  const s = +document.getElementById('sizeRange').value;
  const f = document.getElementById('fontPick').value;
- const o = new CloudObj(t, c, s, f, W/2, H/2);
+ const o = new CloudObj(t, c, s, f, W/2 + (Math.random()-0.5)*200, H/2 + (Math.random()-0.5)*200);
  objects.push(o); select(o); render(); updateList();
 }
 function select(o) { selected = o; updateList(); updateEdit(); render(); }
@@ -249,7 +288,9 @@ function updateEdit() {
  document.getElementById('scaleRange').value = Math.round(selected.sc*100); document.getElementById('scaleVal').textContent = Math.round(selected.sc*100)+'%';
  document.getElementById('rotRange').value = selected.rot; document.getElementById('rotVal').textContent = selected.rot+'°';
 }
+function render() { ctx.fillStyle='#FFF'; ctx.fillRect(0,0,W,H); objects.forEach(o=>o.draw(ctx)); }
 
+// 交互事件
 canvas.addEventListener('mousedown', e => {
  const r = canvas.getBoundingClientRect();
  const x = (e.clientX-r.left)*(W/r.width), y = (e.clientY-r.top)*(H/r.height);
@@ -263,10 +304,11 @@ canvas.addEventListener('mousemove', e => {
  selected.y = (e.clientY-r.top)*(H/r.height) - offset.y;
  render();
 });
-canvas.addEventListener('mouseup', () => { dragging=false; render(); });
+canvas.addEventListener('mouseup', () => dragging=false);
 canvas.addEventListener('wheel', e => {
  if(!selected) return; e.preventDefault();
- selected.sc *= e.deltaY>0?0.9:1.1; selected.sc = Math.max(0.05, Math.min(6, selected.sc));
+ selected.sc *= e.deltaY>0?0.9:1.1;
+ selected.sc = Math.max(0.05, Math.min(6, selected.sc));
  updateEdit(); render();
 }, {passive:false});
 document.addEventListener('keydown', e => { if((e.key==='Delete'||e.key==='Backspace')&&selected&&document.activeElement.tagName!=='INPUT') delObj(); });
@@ -278,9 +320,11 @@ document.getElementById('colorPick').addEventListener('input', e => document.get
 document.getElementById('colorHex').addEventListener('input', e => document.getElementById('colorPick').value = e.target.value);
 document.getElementById('sizeRange').addEventListener('input', e => document.getElementById('sizeVal').textContent = e.target.value);
 
+// 导出功能
 async function exportPng() {
  if(!objects.length) return alert('画布为空');
- const u = getUsage(); if(!premium.isPro && u.png >= 1) { alert('📅 免费用户每日限导出 1 次'); return; }
+ const u = getUsage();
+ if(!premium.isPro && u.png >= 1) { alert('📅 免费用户每日限导出 1 次 PNG。\n点击"激活会员"即可无限使用！'); openPayModal(); return; }
  const prev = selected; selected = null; render();
  const a = document.createElement('a'); a.download = `云朵字_${Date.now()}.png`; a.href = canvas.toDataURL('image/png'); a.click();
  if(!premium.isPro) { u.png++; localStorage.setItem(USAGE_KEY, JSON.stringify(u)); }
@@ -288,7 +332,8 @@ async function exportPng() {
 }
 async function exportPdf() {
  if(!objects.length) return alert('画布为空');
- const u = getUsage(); if(!premium.isPro && u.pdf >= 1) { alert('📅 免费用户每日限导出 1 次'); return; }
+ const u = getUsage();
+ if(!premium.isPro && u.pdf >= 1) { alert('📅 免费用户每日限导出 1 次 PDF。\n点击"激活会员"即可无限使用！'); openPayModal(); return; }
  const {jsPDF} = window.jspdf; const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
  const prev = selected; selected = null; render();
  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297); pdf.save(`云朵字_${Date.now()}.pdf`);
@@ -296,23 +341,34 @@ async function exportPdf() {
  selected = prev; render(); updateUI();
 }
 
-function openPayModal() { document.getElementById('payModal').classList.add('active'); }
-function closePayModal() { document.getElementById('payModal').classList.remove('active'); }
-async function doActivate() {
- const k = document.getElementById('keyInput').value;
- const res = await premium.activate(k);
- document.getElementById('actMsg').innerText = res.msg;
- if(res.ok) setTimeout(() => { closePayModal(); updateUI(); }, 1200);
+// 支付弹窗逻辑
+function openPayModal() { 
+    // 初始化支付信息
+    document.getElementById('fakaLink').href = SITE_CONFIG.PAYMENT.FAKA_URL;
+    document.getElementById('wxQR').src = SITE_CONFIG.PAYMENT.WECHAT_QR;
+    document.getElementById('aliQR').src = SITE_CONFIG.PAYMENT.ALIPAY_QR;
+    document.getElementById('contactEmail').textContent = SITE_CONFIG.PAYMENT.EMAIL;
+    
+    document.getElementById('payModal').classList.add('active'); 
+}
+function closePayModal() { document.getElementById('payModal').classList.remove('active'); document.getElementById('actMsg').textContent=''; document.getElementById('keyInput').value=''; }
+function switchPay(idx) {
+    document.querySelectorAll('.pay-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.querySelectorAll('.pay-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
 }
 
-window.onload = () => {
- const saved = localStorage.getItem('tt_cloud_text_objs_v2');
- if(saved) {
- objects = JSON.parse(saved).map(o => Object.assign(new CloudObj(), o));
- idSeq = Math.max(0, ...objects.map(o => o.id)) + 1;
- }
- render(); updateUI();
-};
+async function doActivate() {
+ const k = document.getElementById('keyInput').value;
+ const m = document.getElementById('actMsg');
+ m.style.color = '#333'; m.textContent = '⏳ 验证中...';
+ const res = await premium.activate(k);
+ m.style.color = res.ok ? '#10b981' : '#ef4444';
+ m.textContent = res.msg;
+ if(res.ok) setTimeout(() => { closePayModal(); updateUI(); }, 1200);
+}
+document.getElementById('keyInput').addEventListener('keypress', e => { if(e.key==='Enter') doActivate(); });
+
+render(); updateUI();
 </script>
 </body>
 </html>

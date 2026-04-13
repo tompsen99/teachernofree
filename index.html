@@ -4,12 +4,11 @@
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>教师工具站 - 在线教学工具集合</title>
- <link rel="manifest" href="manifest.json">
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+ <!-- 引入全局配置 -->
  <script src="config.js"></script>
- <script src="tt-core.js"></script>
  <style>
- :root{--primary:#4facfe;--bg:#f8fafc;--card:#fff;--text:#1e293b;--light:#64748b;--border:#e2e8f0;--shadow:0 4px 6px rgba(0,0,0,.05)}
+ :root{--primary:#4facfe;--bg:#f8fafc;--card:#fff;--text:#1e293b;--light:#64748b;--border:#e2e8f0;--shadow:0 4px 6px rgba(0,0,0,.05); --gold:#fbbf24}
  *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
  body{background:var(--bg);color:var(--text)}
  nav{background:var(--card);box-shadow:var(--shadow);position:sticky;top:0;z-index:100;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
@@ -50,6 +49,16 @@
  .btn-close{margin-top:10px;background:none;border:none;color:var(--light);cursor:pointer;text-decoration:underline}
  .loading{grid-column:1/-1;text-align:center;padding:3rem;color:var(--light)}
  @media(max-width:768px){nav{flex-direction:column;gap:1rem}.grid{grid-template-columns:1fr}}
+
+ /* 新增支付界面样式 */
+ .pay-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 15px 0; }
+ .pay-tab { flex: 1; padding: 10px; cursor: pointer; font-size: 0.8rem; color: var(--light); }
+ .pay-tab.active { color: var(--gold); border-bottom: 2px solid var(--gold); font-weight: bold; }
+ .pay-panel { display: none; padding: 10px 0; }
+ .pay-panel.active { display: block; }
+ .qr-box { width: 120px; height: 120px; background: #eee; margin: 10px auto; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+ .qr-box img { max-width: 100%; }
+ .auto-link { display: block; background: #fef3c7; color: #b45309; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-bottom: 10px; border: 1px dashed #f59e0b; font-size: 0.9rem; }
  </style>
 </head>
 <body>
@@ -98,52 +107,105 @@
 <div class="modal" id="payModal">
  <div class="modal-box">
  <h3>🔑 激活会员</h3>
- <p style="color:var(--light);font-size:.9rem">我的设备ID: <span id="myFinger" style="color:var(--primary); font-weight:bold"></span></p>
- <input type="text" id="kIn" placeholder="TEACHERPRO-xxxxxxxxxx">
- <button class="btn-sub" onclick="doPay()">立即激活</button>
- <p id="payMsg" style="margin-top:8px;font-size:.9rem;min-height:20px"></p>
+ 
+ <div class="pay-tabs">
+    <div class="pay-tab active" onclick="switchPay(0)">自动发卡</div>
+    <div class="pay-tab" onclick="switchPay(1)">扫码/邮件</div>
+    <div class="pay-tab" onclick="switchPay(2)">激活码</div>
+ </div>
+
+ <div class="pay-panel active" id="payPanel0">
+    <a href="#" id="fakaLink" target="_blank" class="auto-link">🚀 前往自动化发卡平台 (推荐)</a>
+ </div>
+
+ <div class="pay-panel" id="payPanel1">
+    <div style="display:flex; justify-content:space-around">
+        <div><div class="qr-box"><img id="wxQR" src="" alt="微信"></div></div>
+        <div><div class="qr-box"><img id="aliQR" src="" alt="支付宝"></div></div>
+    </div>
+    <p style="font-size:0.7rem; margin-top:5px; color:var(--light)">支付后发截图至：<b id="contactEmail"></b></p>
+ </div>
+
+ <div class="pay-panel" id="payPanel2">
+    <input type="text" id="kIn" placeholder="TEACHERPRO-xxxxxxxxxx">
+    <button class="btn-sub" onclick="doPay()">立即激活</button>
+    <p id="payMsg" style="margin-top:8px;font-size:.9rem;min-height:20px"></p>
+ </div>
+
  <button class="btn-close" onclick="closePay()">关闭</button>
  </div>
 </div>
 
 <script>
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
-
-const SECRET_KEY = SITE_CONFIG.SECRET_KEY;
+// 会员核心逻辑
+const SECRET_KEYS = SITE_CONFIG.SECRET_KEYS;
 const STORAGE_KEY = SITE_CONFIG.STORAGE.LICENSE;
 
-async function updMemUI(){
- const s=document.getElementById('memStatus');
- const finger = await TT_SDK.getFingerprint();
- document.getElementById('myFinger').innerText = finger;
- const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
- if(d && (!d.e || Date.now() < d.e)){
- s.innerHTML='👑 会员用户'; s.style.color='#10b981';
+class PM{
+ constructor(){this.d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");this.p=this._ck();}
+ _ck(){if(!this.d)return false;if(this.d.e&&Date.now()>this.d.e){localStorage.removeItem(STORAGE_KEY);this.d=null;return false;}return true;}
+ async act(k){
+ k=k.trim();if(!k.startsWith('TEACHERPRO-'))return{o:0,m:'格式错误'};
+ try{const p=JSON.parse(atob(k.replace('TEACHERPRO-','')));
+ const signData=JSON.stringify({t:p.t,i:p.i,e:p.e,d:p.d});
+ 
+ let ok = false;
+ for(const sk of SECRET_KEYS) {
+    const s = await this._h(signData, sk);
+    if(s === p.s) { ok = true; break; }
  }
+ 
+ if(!ok)return{o:0,m:'签名无效'};
+ this.d={t:p.t,i:p.i,e:p.e,d:p.d||'dev_'+Math.random().toString(36).slice(2),a:Date.now()};
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(this.d));this.p=true;return{o:1,m:p.t==='permanent'?'永久会员':'30 天会员'}}
+ catch(e){return{o:0,m:'解析失败'}}}
+ async _h(t, sk){const e=new TextEncoder(),k=await crypto.subtle.importKey('raw',e.encode(sk),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',k,e.encode(t)))).map(b=>b.toString(16).padStart(2,'0')).join('');}
+}
+const pm=new PM();
+
+function updMemUI(){
+ const s=document.getElementById('memStatus');
+ if(pm.p){s.innerHTML='👑 '+ (pm.d.t==='permanent'?'永久会员':'会员');s.style.color='#10b981';}
+ else{s.innerHTML='🔒 游客';s.style.color='var(--light)';}
 }
 
-function openPay(){document.getElementById('payModal').classList.add('open');}
-function closePay(){document.getElementById('payModal').classList.remove('open');}
+function openPay(){
+    document.getElementById('fakaLink').href = SITE_CONFIG.PAYMENT.FAKA_URL;
+    document.getElementById('wxQR').src = SITE_CONFIG.PAYMENT.WECHAT_QR;
+    document.getElementById('aliQR').src = SITE_CONFIG.PAYMENT.ALIPAY_QR;
+    document.getElementById('contactEmail').textContent = SITE_CONFIG.PAYMENT.EMAIL;
+    document.getElementById('payModal').classList.add('open');
+    document.getElementById('kIn').focus();
+}
+function closePay(){document.getElementById('payModal').classList.remove('open');document.getElementById('payMsg').textContent='';}
+function switchPay(idx) {
+    document.querySelectorAll('.pay-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.querySelectorAll('.pay-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+
 async function doPay(){
- const k=document.getElementById('kIn').value.trim();const m=document.getElementById('payMsg');
- m.innerText='验证中...';
- try {
-     const p=JSON.parse(atob(k.replace('TEACHERPRO-','')));
-     const curFinger = await TT_SDK.getFingerprint();
-     if (p.d && p.d !== "" && !p.d.split(',').includes(curFinger)) {
-         m.style.color='#ef4444'; m.innerText='❌ 卡密已绑定其他设备'; return;
-     }
-     localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-     m.style.color='#10b981'; m.innerText='✅ 激活成功';
-     setTimeout(()=>location.reload(), 1000);
- } catch(e){ m.style.color='#ef4444'; m.innerText='❌ 格式无效'; }
+ const k=document.getElementById('kIn').value;const m=document.getElementById('payMsg');
+ m.style.color='#333';m.textContent='验证中...';
+ const r=await pm.act(k);m.style.color=r.o?'#10b981':'#ef4444';m.textContent=(r.o?'✅ ':'❌ ')+r.m;
+ if(r.o)setTimeout(()=>{closePay();updMemUI();},1000);
 }
+document.getElementById('kIn').addEventListener('keypress',e=>{if(e.key==='Enter')doPay();});
 
+// ================= 核心：动态加载工具 (防缓存版) =================
 async function loadTools() {
  const grid = document.getElementById('tGrid');
  try {
+ // 🔑 关键修改：添加 ?t= 时间戳，强制浏览器请求最新的 tools.json，忽略缓存
  const response = await fetch('tools.json?t=' + new Date().getTime());
+ if (!response.ok) throw new Error('网络请求失败');
  const data = await response.json();
+ 
+ if (!data.tools || data.tools.length === 0) {
+ grid.innerHTML = '<div class="loading">⚠️ 暂无工具配置，请检查 tools.json</div>';
+ return;
+ }
+ 
  grid.innerHTML = data.tools.map(tool => `
  <div class="card" data-category="${tool.category?.join(' ') || 'teaching'}">
  <div class="icon" style="background:${tool.gradient}"><i class="fas ${tool.icon}"></i></div>
@@ -153,40 +215,68 @@ async function loadTools() {
  <a href="${tool.file}" class="link">立即使用 <i class="fas fa-arrow-right"></i></a>
  </div>
  `).join('');
+ 
+ // 重新绑定分类筛选和搜索事件
  bindCategoryFilter();
  bindSearch();
+ 
  } catch (error) {
- grid.innerHTML = `<div class="loading">加载失败</div>`;
+ console.error('加载工具失败:', error);
+ grid.innerHTML = `<div class="loading" style="color:#ef4444">
+ <i class="fas fa-exclamation-circle"></i><br>
+ 加载失败 (${error.message})<br>
+ <small>请检查 tools.json 是否存在且格式正确</small>
+ </div>`;
  }
 }
 
+// 分类筛选逻辑
 function bindCategoryFilter() {
  const tabs = document.querySelectorAll('.cat');
  const cards = document.querySelectorAll('.card');
+ 
  tabs.forEach(tab => {
  tab.onclick = () => {
  tabs.forEach(t => t.classList.remove('act'));
  tab.classList.add('act');
  const cat = tab.dataset.c;
+ 
  cards.forEach(card => {
  const cats = card.dataset.category?.split(' ') || [];
- card.style.display = (cat === 'all' || cats.includes(cat)) ? 'block' : 'none';
+ if (cat === 'all' || cats.includes(cat)) {
+ card.style.display = 'block';
+ setTimeout(() => { card.style.opacity = '1'; card.style.transform = 'scale(1)'; }, 10);
+ } else {
+ card.style.opacity = '0';
+ card.style.transform = 'scale(0.8)';
+ setTimeout(() => { card.style.display = 'none'; }, 300);
+ }
  });
  };
  });
 }
 
+// 搜索逻辑
 function bindSearch() {
  const input = document.getElementById('sIn');
  const cards = document.querySelectorAll('.card');
+ 
  input.oninput = (e) => {
  const term = e.target.value.toLowerCase();
  cards.forEach(card => {
- card.style.display = card.textContent.toLowerCase().includes(term) ? 'block' : 'none';
+ const text = card.textContent.toLowerCase();
+ if (text.includes(term)) {
+ card.style.display = 'block';
+ setTimeout(() => { card.style.opacity = '1'; }, 10);
+ } else {
+ card.style.opacity = '0';
+ setTimeout(() => { card.style.display = 'none'; }, 300);
+ }
  });
  };
 }
 
+// 页面初始化
 document.addEventListener('DOMContentLoaded', () => {
  loadTools();
  updMemUI();

@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
- <title>平均数可视化课件 | 离线专业版</title>
+ <title>平均数可视化课件 - 响应式增强版</title>
  <script src="config.js"></script>
  <script src="tt-core.js"></script>
  <style>
@@ -11,12 +11,12 @@
  :root { --primary: #1e40af; --success: #22c55e; --danger: #ef4444; --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
  body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-gradient); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
- header { background: white; padding: 10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; z-index: 100; }
+ header { background: white; padding: 10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; z-index: 100; }
  .title-input { font-size: clamp(18px, 4vw, 24px); font-weight: 700; color: var(--primary); border: none; background: transparent; flex: 1; min-width: 200px; }
  .header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
  .header-btns button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 14px; transition: all 0.2s; }
  .main-container { display: flex; flex: 1; padding: 12px; gap: 12px; overflow: hidden; position: relative; }
- .sidebar { width: 340px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 16px; overflow-y: auto; transition: all 0.3s; z-index: 50; }
+ .sidebar { width: 340px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 16px; overflow-y: auto; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 50; }
  .chart-area { flex: 1; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 16px; display: flex; flex-direction: column; position: relative; min-width: 0; }
  .stat-row { display: flex; justify-content: space-around; font-size: clamp(16px, 3vw, 24px); font-weight: 700; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 12px; }
  canvas { flex: 1; width: 100% !important; height: 100% !important; touch-action: none; }
@@ -25,24 +25,19 @@
  </style>
 </head>
 <body>
-
 <header>
  <input id="custom-title" type="text" value="平均数实验课件" class="title-input">
  <div class="header-btns">
- <button onclick="resetCurrent()">🔄 重置</button>
  <button onclick="undoLast()">↩️ 撤销</button>
- <button onclick="toggleAvgLine()" id="lineBtn" style="background:#fef3c7; border-color:#fde68a">📏 平均线</button>
- <span style="font-size:0.7rem; color:#94a3b8">数据已自动同步</span>
+ <button onclick="resetCurrent()">🔄 重置</button>
  </div>
 </header>
-
 <div class="main-container">
  <div class="sidebar" id="sidebar">
  <h3 style="margin-bottom:12px">数据管理</h3>
  <div id="data-list"></div>
  <button onclick="addStudent()" style="width:100%; padding:12px; margin-top:10px; background:var(--success); color:white; border:none; border-radius:10px; cursor:pointer">➕ 新增数据</button>
  </div>
-
  <div class="chart-area" id="chart-panel">
  <div class="stat-row">
  <span>总和: <span id="total" style="color:var(--primary)">0</span></span>
@@ -52,165 +47,102 @@
  <canvas id="canvas"></canvas>
  </div>
 </div>
-
 <script>
- let canvas, ctx;
  let defaultStudents = [
  {id:1, name:"第一次", color:"#ef4444", blocks: Array(6).fill("#ef4444")},
  {id:2, name:"第二次", color:"#3b82f6", blocks: Array(8).fill("#3b82f6")},
  {id:3, name:"第三次", color:"#22c55e", blocks: Array(5).fill("#22c55e")}
  ];
- 
- // 集成 SDK 存储：优先加载上次保存的数据
- let students = TT_SDK.Store.get('avg_v2_data') || JSON.parse(JSON.stringify(defaultStudents));
+ let students = JSON.parse(JSON.stringify(defaultStudents));
  let history = [];
+ let canvas, ctx;
  let isDragging = false, dragged = null, mousePos = { x: 0, y: 0 };
- let showAvgLine = false;
-
+ 
  function init() {
- canvas = document.getElementById('canvas');
- ctx = canvas.getContext('2d');
+ canvas = document.getElementById('canvas'); ctx = canvas.getContext('2d');
  window.addEventListener('resize', () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; draw(); });
+ canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
  canvas.addEventListener('mousedown', onMouseDown);
  window.addEventListener('mousemove', onMouseMove);
  window.addEventListener('mouseup', onMouseUp);
- 
- canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
- updateStats(); renderSidebar(); draw();
+ const saved = localStorage.getItem('tt_avg_v3_students');
+ if(saved) students = JSON.parse(saved);
+ updateStats(); renderSidebar(); draw(); saveHistory();
  }
-
- function save() {
- TT_SDK.Store.save('avg_v2_data', students);
- updateStats(); renderSidebar(); draw();
+ function saveHistory() {
+ history.push(JSON.stringify(students)); if(history.length > 20) history.shift();
+ localStorage.setItem('tt_avg_v3_students', JSON.stringify(students));
  }
-
  function draw() {
  ctx.clearRect(0, 0, canvas.width, canvas.height);
  if (students.length === 0) return;
  const padding = { left: 60, right: 60, top: 40, bottom: 60 };
- const chartW = canvas.width - padding.left - padding.right;
  const chartH = canvas.height - padding.top - padding.bottom;
- const maxVal = 15;
- const unitH = chartH / maxVal;
- const baseY = canvas.height - padding.bottom;
- const barW = Math.min(60, (chartW / students.length) * 0.6);
- const spacing = (chartW - (students.length * barW)) / (students.length + 1);
-
- // 绘制网格
- ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.textAlign = 'right'; ctx.font = '14px sans-serif';
- for(let i=0; i<=maxVal; i++) {
- let y = baseY - i * unitH;
- ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(canvas.width - padding.right, y); ctx.stroke();
- ctx.fillStyle = '#64748b'; ctx.fillText(i, padding.left - 10, y + 5);
- }
-
- // 绘制方块
+ const unitH = chartH / 15; const baseY = canvas.height - padding.bottom;
+ const barW = Math.min(60, ((canvas.width - 120) / students.length) * 0.6);
+ const spacing = ((canvas.width - 120) - (students.length * barW)) / (students.length + 1);
  students.forEach((s, i) => {
  const x = padding.left + spacing + i * (barW + spacing);
  s.blocks.forEach((color, j) => {
  if (isDragging && dragged && dragged.sIdx === i && dragged.bIdx === j) return;
- ctx.fillStyle = color;
- ctx.fillRect(x, baseY - (j + 1) * unitH + 2, barW, unitH - 4);
+ ctx.fillStyle = color; ctx.fillRect(x, baseY - (j + 1) * unitH + 2, barW, unitH - 4);
  });
  ctx.fillStyle = '#334155'; ctx.font = 'bold 16px Noto Sans SC'; ctx.textAlign = 'center';
  ctx.fillText(s.name, x + barW/2, baseY + 30);
  });
-
- if (showAvgLine) {
- const avg = students.reduce((a,b)=>a+b.blocks.length,0) / students.length;
- const avgY = baseY - avg * unitH;
- ctx.setLineDash([5, 5]); ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
- ctx.beginPath(); ctx.moveTo(padding.left, avgY); ctx.lineTo(canvas.width-padding.right, avgY); ctx.stroke();
- ctx.setLineDash([]); ctx.fillStyle = '#ef4444'; ctx.textAlign = 'left';
- ctx.fillText(`平均值: ${avg.toFixed(1)}`, canvas.width - padding.right + 10, avgY + 5);
+ if (isDragging && dragged) { ctx.fillStyle = dragged.color; ctx.fillRect(mousePos.x - barW/2, mousePos.y - unitH/2, barW, unitH - 4); }
  }
-
- if (isDragging && dragged) {
- ctx.fillStyle = dragged.color; ctx.shadowBlur=10; ctx.shadowColor='rgba(0,0,0,0.3)';
- ctx.fillRect(mousePos.x - barW/2, mousePos.y - unitH/2, barW, unitH-4);
- ctx.shadowBlur=0;
- }
- }
-
  function onMouseDown(e) {
- const r = canvas.getBoundingClientRect();
- const x = e.clientX - r.left, y = e.clientY - r.top;
- const padding = { left: 60, bottom: 60, top: 40 };
- const chartH = canvas.height - padding.top - padding.bottom;
- const unitH = chartH / 15;
- const chartW = canvas.width - 120;
+ const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+ const unitH = (canvas.height - 100) / 15; const chartW = canvas.width - 120;
  const barW = Math.min(60, (chartW / students.length) * 0.6);
  const spacing = (chartW - (students.length * barW)) / (students.length + 1);
-
  students.forEach((s, i) => {
  const bx = 60 + spacing + i * (barW + spacing);
  if (x > bx && x < bx + barW) {
  const j = Math.floor((canvas.height - 60 - y) / unitH);
- if (j >= 0 && j < s.blocks.length) {
- dragged = { sIdx: i, bIdx: j, color: s.blocks[j] };
- isDragging = true;
- }
+ if (j >= 0 && j < s.blocks.length) { dragged = { sIdx: i, bIdx: j, color: s.blocks[j] }; isDragging = true; }
  }
  });
  }
-
- function onMouseMove(e) {
- if (!isDragging) return;
- const r = canvas.getBoundingClientRect();
- mousePos = { x: e.clientX - r.left, y: e.clientY - r.top };
- draw();
- }
-
+ function onMouseMove(e) { if (!isDragging) return; const r = canvas.getBoundingClientRect(); mousePos = { x: e.clientX - r.left, y: e.clientY - r.top }; draw(); }
  function onMouseUp(e) {
  if (!isDragging) return;
- const r = canvas.getBoundingClientRect();
- const x = e.clientX - r.left;
- const chartW = canvas.width - 120;
- const barW = Math.min(60, (chartW / students.length) * 0.6);
- const spacing = (chartW - (students.length * barW)) / (students.length + 1);
-
+ const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left;
+ const barW = Math.min(60, ((canvas.width - 120) / students.length) * 0.6);
+ const spacing = ((canvas.width - 120) - (students.length * barW)) / (students.length + 1);
  students.forEach((s, i) => {
  const bx = 60 + spacing + i * (barW + spacing);
- if (x > bx - 20 && x < bx + barW + 20) {
- if (i !== dragged.sIdx) {
- students[dragged.sIdx].blocks.splice(dragged.bIdx, 1);
- students[i].blocks.push(dragged.color);
- save();
- }
+ if (x > bx - 20 && x < bx + barW + 20 && i !== dragged.sIdx) {
+ students[dragged.sIdx].blocks.splice(dragged.bIdx, 1); students[i].blocks.push(dragged.color);
+ saveHistory();
  }
  });
- isDragging = false; dragged = null; draw();
+ isDragging = false; dragged = null; updateStats(); renderSidebar(); draw();
  }
-
  function updateStats() {
  const sum = students.reduce((a, s) => a + s.blocks.length, 0);
- const avg = students.length ? (sum / students.length).toFixed(1) : 0;
  document.getElementById('total').textContent = sum;
  document.getElementById('count').textContent = students.length;
- document.getElementById('avg').textContent = avg;
+ document.getElementById('avg').textContent = students.length ? (sum/students.length).toFixed(1) : 0;
  }
-
  function renderSidebar() {
  const list = document.getElementById('data-list');
  list.innerHTML = students.map((s, i) => `
  <div class="data-item">
  <div style="width:12px;height:12px;border-radius:50%;background:${s.color}"></div>
- <input type="text" value="${s.name}" style="flex:1;border:none;background:transparent" onchange="students[${i}].name=this.value;save()">
- <span style="font-weight:bold">${s.blocks.length}</span>
- <button onclick="students.splice(${i},1);save()" style="border:none;background:none;cursor:pointer">✕</button>
+ <input type="text" value="${s.name}" style="flex:1;border:none;background:transparent" onchange="students[${i}].name=this.value;saveHistory();draw()">
+ <button onclick="students.splice(${i},1);saveHistory();renderSidebar();draw();updateStats()" style="border:none;background:none;cursor:pointer">✕</button>
  </div>
  `).join('');
  }
-
  function addStudent() {
- const colors = ["#ef4444","#3b82f6","#22c55e","#ec4899","#f59e0b"];
- students.push({id:Date.now(), name:"新数据", color:colors[students.length % 5], blocks:Array(5).fill(colors[students.length % 5])});
- save();
+ const colors = ["#ef4444","#3b82f6","#22c55e"];
+ students.push({id:Date.now(), name:"新数据", color:colors[students.length % 3], blocks:Array(5).fill(colors[students.length % 3])});
+ saveHistory(); renderSidebar(); draw(); updateStats();
  }
-
- function resetCurrent() { if(confirm("重置为初始状态？")) { students = JSON.parse(JSON.stringify(defaultStudents)); save(); } }
- function toggleAvgLine() { showAvgLine = !showAvgLine; draw(); }
-
+ function resetCurrent() { if(confirm("重置吗？")) { students = JSON.parse(JSON.stringify(defaultStudents)); saveHistory(); renderSidebar(); draw(); updateStats(); } }
+ function undoLast() { if(history.length <= 1) return; history.pop(); students = JSON.parse(history[history.length-1]); updateStats(); renderSidebar(); draw(); }
  window.onload = init;
 </script>
 </body>

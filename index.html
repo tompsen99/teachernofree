@@ -1,170 +1,196 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教师工具站 - 离线专业版</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="config.js"></script>
-    <script src="tt-core.js"></script>
-    <style>
-        :root{--primary:#4facfe;--bg:#f8fafc;--card:#fff;--text:#1e293b;--light:#64748b;--border:#e2e8f0;--shadow:0 4px 6px rgba(0,0,0,.05)}
-        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
-        body{background:var(--bg);color:var(--text)}
-        nav{background:var(--card);box-shadow:var(--shadow);position:sticky;top:0;z-index:100;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
-        .logo{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--primary),#667eea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none}
-        .nav-right{display:flex;align-items:center;gap:1.5rem}
-        .mem-badge{font-size:.85rem;padding:5px 14px;border-radius:20px;background:#f1f5f9;color:var(--light);font-weight:600;display:flex;align-items:center;gap:6px}
-        .mem-pro{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
-        .act-btn{padding:8px 18px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;transition:0.2s}
-        .act-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,0.3)}
-        .hero{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:5rem 2rem;text-align:center}
-        .hero h1{font-size:2.8rem;margin-bottom:1rem;letter-spacing:-1px}
-        .hero p{font-size:1.2rem;opacity:.9;margin-bottom:2rem}
-        .search{max-width:600px;margin:0 auto;position:relative}
-        .search input{width:100%;padding:1.2rem 3rem 1.2rem 1.5rem;border:none;border-radius:50px;font-size:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.15);outline:none}
-        .search i{position:absolute;right:1.8rem;top:50%;transform:translateY(-50%);color:var(--light);font-size:1.2rem}
-        .cats{max-width:1200px;margin:-2.5rem auto 2rem;padding:0 2rem;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;z-index:10;position:relative}
-        .cat{padding:.8rem 1.8rem;background:var(--card);border:2px solid var(--border);border-radius:50px;cursor:pointer;font-weight:600;transition:.2s;box-shadow:var(--shadow)}
-        .cat:hover, .cat.act{background:var(--primary);color:#fff;border-color:var(--primary);transform:translateY(-2px)}
-        .container{max-width:1200px;margin:3rem auto;padding:0 2rem}
-        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:2.5rem}
-        .card{background:var(--card);border-radius:20px;padding:2.5rem;box-shadow:var(--shadow);transition:.3s;border:2px solid transparent;text-decoration:none;color:inherit;display:flex;flex-direction:column}
-        .card:hover{transform:translateY(-8px);box-shadow:0 20px 40px rgba(0,0,0,0.1);border-color:var(--primary)}
-        .icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin-bottom:1.5rem;color:white;box-shadow:0 8px 16px rgba(0,0,0,0.1)}
-        .card h3{font-size:1.4rem;margin-bottom:.8rem;font-weight:700}
-        .card p{color:var(--light);margin-bottom:1.5rem;line-height:1.6;font-size:0.95rem;flex:1}
-        .link{color:var(--primary);font-weight:700;display:inline-flex;align-items:center;gap:0.5rem;margin-top:auto}
-        .modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:999;justify-content:center;align-items:center;backdrop-filter:blur(6px);animation:fadeIn 0.2s ease}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        .modal.open{display:flex}
-        .modal-box{background:#fff;padding:40px;border-radius:24px;width:95%;max-width:420px;text-align:center;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}
-        .modal input{width:100%;padding:14px;border:2px solid var(--border);border-radius:12px;margin:18px 0;font-size:1.1rem;text-align:center;outline:none;transition:0.2s}
-        .modal input:focus{border-color:var(--primary)}
-        .btn-sub{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:1rem;transition:0.2s}
-        .btn-sub:hover{opacity:0.9;transform:scale(0.98)}
-    </style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>教师工具站 - 在线教学工具集合</title>
+ <link rel="manifest" href="manifest.json">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+ <script src="config.js"></script>
+ <script src="tt-core.js"></script>
+ <style>
+ :root{--primary:#4facfe;--bg:#f8fafc;--card:#fff;--text:#1e293b;--light:#64748b;--border:#e2e8f0;--shadow:0 4px 6px rgba(0,0,0,.05)}
+ *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+ body{background:var(--bg);color:var(--text)}
+ nav{background:var(--card);box-shadow:var(--shadow);position:sticky;top:0;z-index:100;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
+ .logo{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--primary),#667eea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none}
+ .nav-right{display:flex;align-items:center;gap:1rem}
+ .nav-link{color:var(--text);text-decoration:none;font-weight:500}
+ .nav-link:hover{color:var(--primary)}
+ .act-btn{padding:8px 16px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px}
+ .act-btn:hover{opacity:.9}
+ .hero{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:4rem 2rem;text-align:center}
+ .hero h1{font-size:2.5rem;margin-bottom:1rem}
+ .hero p{font-size:1.1rem;opacity:.9;margin-bottom:2rem}
+ .search{max-width:600px;margin:0 auto;position:relative}
+ .search input{width:100%;padding:1rem 3rem 1rem 1.5rem;border:none;border-radius:50px;font-size:1rem;box-shadow:0 10px 25px rgba(0,0,0,.15)}
+ .search i{position:absolute;right:1.5rem;top:50%;transform:translateY(-50%);color:var(--light)}
+ .cats{max-width:1200px;margin:-2rem auto 2rem;padding:0 2rem;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+ .cat{padding:.7rem 1.5rem;background:var(--card);border:2px solid var(--border);border-radius:50px;cursor:pointer;font-weight:500;transition:.2s}
+ .cat:hover,.cat.act{background:var(--primary);color:#fff;border-color:var(--primary)}
+ .container{max-width:1200px;margin:2rem auto;padding:0 2rem}
+ .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2rem;margin-bottom:4rem}
+ .card{background:var(--card);border-radius:16px;padding:2rem;box-shadow:var(--shadow);transition:.3s;border:2px solid transparent}
+ .card:hover{transform:translateY(-5px);box-shadow:0 15px 30px rgba(0,0,0,.08);border-color:var(--primary)}
+ .icon{width:60px;height:60px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:1rem}
+ .card h3{font-size:1.2rem;margin-bottom:.5rem}
+ .card p{color:var(--light);margin-bottom:1rem;line-height:1.5}
+ .tags{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+ .tag{padding:.2rem .7rem;background:#f1f5f9;border-radius:20px;font-size:.8rem;color:var(--light)}
+ .link{color:var(--primary);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:.5rem}
+ .features{background:var(--card);padding:4rem 2rem;margin-top:4rem}
+ .feat-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;text-align:center}
+ .feat i{font-size:2.5rem;color:var(--primary);margin-bottom:1rem}
+ footer{background:#0f172a;color:#94a3b8;padding:3rem 2rem;text-align:center;margin-top:4rem}
+ .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;justify-content:center;align-items:center}
+ .modal.open{display:flex}
+ .modal-box{background:#fff;padding:24px;border-radius:16px;width:90%;max-width:400px;text-align:center}
+ .modal input{width:100%;padding:12px;border:2px solid var(--border);border-radius:10px;margin:12px 0;font-size:1rem}
+ .btn-sub{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer}
+ .btn-close{margin-top:10px;background:none;border:none;color:var(--light);cursor:pointer;text-decoration:underline}
+ .loading{grid-column:1/-1;text-align:center;padding:3rem;color:var(--light)}
+ @media(max-width:768px){nav{flex-direction:column;gap:1rem}.grid{grid-template-columns:1fr}}
+ </style>
 </head>
 <body>
-    <nav>
-        <a href="/" class="logo"><i class="fas fa-toolbox"></i> 教师工具站</a>
-        <div class="nav-right">
-            <span id="memStatus" class="mem-badge"><i class="fas fa-user"></i> 🔒 游客</span>
-            <button class="act-btn" onclick="openPay()"><i class="fas fa-crown"></i> 激活会员</button>
-        </div>
-    </nav>
+<nav>
+ <a href="/" class="logo"><i class="fas fa-toolbox"></i> 教师工具站</a>
+ <div class="nav-right">
+ <a href="#tools" class="nav-link">工具列表</a>
+ <a href="#about" class="nav-link">关于</a>
+ <span id="memStatus" style="font-size:.9rem;color:var(--light)">🔒 游客</span>
+ <button class="act-btn" onclick="openPay()"><i class="fas fa-key"></i> 激活会员</button>
+ </div>
+</nav>
 
-    <section class="hero">
-        <h1>让教学更高效</h1>
-        <p>专业在线工具集合 · 纯前端架构 · 离线可用</p>
-        <div class="search"><input placeholder="搜索 10+ 教学效率工具..." id="sIn"><i class="fas fa-search"></i></div>
-    </section>
+<section class="hero">
+ <h1>让教学更高效</h1>
+ <p>为教师打造的专业在线工具集合，免费使用，无需注册</p>
+ <div class="search"><input placeholder="搜索工具..." id="sIn"><i class="fas fa-search"></i></div>
+</section>
 
-    <div class="cats">
-        <div class="cat act" data-c="all">全部</div>
-        <div class="cat" data-c="design">设计</div>
-        <div class="cat" data-c="teaching">教学</div>
-        <div class="cat" data-c="office">办公</div>
-        <div class="cat" data-c="math">数学</div>
-    </div>
+<div class="cats">
+ <div class="cat act" data-c="all">全部</div>
+ <div class="cat" data-c="design">设计</div>
+ <div class="cat" data-c="teaching">教学</div>
+ <div class="cat" data-c="office">办公</div>
+ <div class="cat" data-c="math">数学</div>
+</div>
 
-    <div class="container" id="tools">
-        <div class="grid" id="tGrid"></div>
-    </div>
+<div class="container" id="tools">
+ <h2 style="text-align:center;margin-bottom:2rem">热门工具</h2>
+ <div class="grid" id="tGrid">
+ <div class="loading"><i class="fas fa-spinner fa-spin"></i> 正在加载最新工具配置...</div>
+ </div>
+</div>
 
-    <div class="modal" id="payModal">
-        <div class="modal-box">
-            <h3 style="font-size:1.5rem">🔑 激活会员</h3>
-            <p style="color:var(--light); margin-top:8px">解锁无限生成/高清导出/去水印</p>
-            <div id="deviceTag" style="font-size:0.8rem; color:#64748b; margin-top:15px; background:#f8fafc; padding:12px; border-radius:10px; border:1px dashed var(--border)">
-                我的设备ID: <span id="myFingerprint" style="font-family:monospace; font-weight:700; color:var(--primary)">加载中...</span>
-                <br><small style="margin-top:4px; display:block">提示：管理员可凭此ID生成专属卡密</small>
-            </div>
-            <input type="text" id="kIn" placeholder="TEACHERPRO-xxxxxxxxxx">
-            <button class="btn-sub" onclick="doPay()">立即激活</button>
-            <p id="payMsg" style="margin-top:12px; min-height:20px; font-weight:600"></p>
-            <button onclick="closePay()" style="margin-top:15px; background:none; border:none; color:#94a3b8; cursor:pointer; text-decoration:underline">暂不激活，返回</button>
-        </div>
-    </div>
+<section class="features">
+ <div class="feat-grid">
+ <div class="feat"><i class="fas fa-bolt"></i><h3>快速高效</h3><p>打开即用，无需安装</p></div>
+ <div class="feat"><i class="fas fa-shield-alt"></i><h3>安全隐私</h3><p>纯前端计算，数据不上传</p></div>
+ <div class="feat"><i class="fas fa-mobile-alt"></i><h3>多端适配</h3><p>电脑/平板/手机通用</p></div>
+ <div class="feat"><i class="fas fa-gift"></i><h3>完全免费</h3><p>基础功能永久开放</p></div>
+ </div>
+</section>
 
-    <script>
-        // PWA 注册
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log('Offline Ready'));
-        }
+<footer id="about">© 2026 教师工具站 | 纯前端架构 | 本地运行</footer>
 
-        async function initPage() {
-            // 获取设备指纹
-            const finger = await TT_SDK.getFingerprint();
-            document.getElementById('myFingerprint').innerText = finger;
-            
-            // 更新会员状态
-            const status = document.getElementById('memStatus');
-            if (TT_SDK.premium.isPro) {
-                status.innerHTML = `<i class="fas fa-crown"></i> 👑 尊享会员`;
-                status.className = "mem-badge mem-pro";
-            }
-            
-            // 动态加载工具 (防缓存)
-            try {
-                const res = await fetch('tools.json?t=' + Date.now());
-                const data = await res.json();
-                renderTools(data.tools);
-                bindEvents(data.tools);
-            } catch(e) {
-                document.getElementById('tGrid').innerHTML = '<p style="text-align:center; color:red">加载工具配置失败，请检查网络</p>';
-            }
-        }
+<div class="modal" id="payModal">
+ <div class="modal-box">
+ <h3>🔑 激活会员</h3>
+ <p style="color:var(--light);font-size:.9rem">我的设备ID: <span id="myFinger" style="color:var(--primary); font-weight:bold"></span></p>
+ <input type="text" id="kIn" placeholder="TEACHERPRO-xxxxxxxxxx">
+ <button class="btn-sub" onclick="doPay()">立即激活</button>
+ <p id="payMsg" style="margin-top:8px;font-size:.9rem;min-height:20px"></p>
+ <button class="btn-close" onclick="closePay()">关闭</button>
+ </div>
+</div>
 
-        function renderTools(tools) {
-            document.getElementById('tGrid').innerHTML = tools.map(t => `
-                <a href="${t.file}" class="card" data-cat="${t.category.join(' ')}">
-                    <div class="icon" style="background:${t.gradient}"><i class="fas ${t.icon}"></i></div>
-                    <h3>${t.name}</h3>
-                    <p>${t.description}</p>
-                    <div class="link">开始使用 <i class="fas fa-arrow-right"></i></div>
-                </a>
-            `).join('');
-        }
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 
-        function bindEvents(tools) {
-            // 筛选
-            document.querySelectorAll('.cat').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelector('.cat.act').classList.remove('act');
-                    btn.classList.add('act');
-                    const c = btn.dataset.c;
-                    document.querySelectorAll('.card').forEach(card => {
-                        const cats = card.dataset.cat.split(' ');
-                        card.style.display = (c==='all' || cats.includes(c)) ? 'flex' : 'none';
-                    });
-                };
-            });
-            // 搜索
-            document.getElementById('sIn').oninput = (e) => {
-                const val = e.target.value.toLowerCase();
-                document.querySelectorAll('.card').forEach(card => {
-                    card.style.display = card.innerText.toLowerCase().includes(val) ? 'flex' : 'none';
-                });
-            };
-        }
+const SECRET_KEY = SITE_CONFIG.SECRET_KEY;
+const STORAGE_KEY = SITE_CONFIG.STORAGE.LICENSE;
 
-        async function doPay() {
-            const key = document.getElementById('kIn').value.trim();
-            const msg = document.getElementById('payMsg');
-            if(!key) return msg.innerText = "请输入卡密";
-            msg.style.color = "#334155"; msg.innerText = "⏳ 正在云端验证...";
-            const res = await TT_SDK.premium.activate(key);
-            msg.style.color = res.ok ? "#10b981" : "#ef4444";
-            msg.innerText = (res.ok ? "✅ " : "❌ ") + res.msg;
-            if (res.ok) setTimeout(() => location.reload(), 1500);
-        }
+async function updMemUI(){
+ const s=document.getElementById('memStatus');
+ const finger = await TT_SDK.getFingerprint();
+ document.getElementById('myFinger').innerText = finger;
+ const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+ if(d && (!d.e || Date.now() < d.e)){
+ s.innerHTML='👑 会员用户'; s.style.color='#10b981';
+ }
+}
 
-        function openPay() { document.getElementById('payModal').classList.add('open'); }
-        function closePay() { document.getElementById('payModal').classList.remove('open'); }
+function openPay(){document.getElementById('payModal').classList.add('open');}
+function closePay(){document.getElementById('payModal').classList.remove('open');}
+async function doPay(){
+ const k=document.getElementById('kIn').value.trim();const m=document.getElementById('payMsg');
+ m.innerText='验证中...';
+ try {
+     const p=JSON.parse(atob(k.replace('TEACHERPRO-','')));
+     const curFinger = await TT_SDK.getFingerprint();
+     if (p.d && p.d !== "" && !p.d.split(',').includes(curFinger)) {
+         m.style.color='#ef4444'; m.innerText='❌ 卡密已绑定其他设备'; return;
+     }
+     localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+     m.style.color='#10b981'; m.innerText='✅ 激活成功';
+     setTimeout(()=>location.reload(), 1000);
+ } catch(e){ m.style.color='#ef4444'; m.innerText='❌ 格式无效'; }
+}
 
-        initPage();
-    </script>
+async function loadTools() {
+ const grid = document.getElementById('tGrid');
+ try {
+ const response = await fetch('tools.json?t=' + new Date().getTime());
+ const data = await response.json();
+ grid.innerHTML = data.tools.map(tool => `
+ <div class="card" data-category="${tool.category?.join(' ') || 'teaching'}">
+ <div class="icon" style="background:${tool.gradient}"><i class="fas ${tool.icon}"></i></div>
+ <h3>${tool.name}</h3>
+ <p>${tool.description}</p>
+ <div class="tags">${(tool.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
+ <a href="${tool.file}" class="link">立即使用 <i class="fas fa-arrow-right"></i></a>
+ </div>
+ `).join('');
+ bindCategoryFilter();
+ bindSearch();
+ } catch (error) {
+ grid.innerHTML = `<div class="loading">加载失败</div>`;
+ }
+}
+
+function bindCategoryFilter() {
+ const tabs = document.querySelectorAll('.cat');
+ const cards = document.querySelectorAll('.card');
+ tabs.forEach(tab => {
+ tab.onclick = () => {
+ tabs.forEach(t => t.classList.remove('act'));
+ tab.classList.add('act');
+ const cat = tab.dataset.c;
+ cards.forEach(card => {
+ const cats = card.dataset.category?.split(' ') || [];
+ card.style.display = (cat === 'all' || cats.includes(cat)) ? 'block' : 'none';
+ });
+ };
+ });
+}
+
+function bindSearch() {
+ const input = document.getElementById('sIn');
+ const cards = document.querySelectorAll('.card');
+ input.oninput = (e) => {
+ const term = e.target.value.toLowerCase();
+ cards.forEach(card => {
+ card.style.display = card.textContent.toLowerCase().includes(term) ? 'block' : 'none';
+ });
+ };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+ loadTools();
+ updMemUI();
+});
+</script>
 </body>
 </html>
